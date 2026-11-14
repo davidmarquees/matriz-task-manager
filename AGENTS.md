@@ -1,12 +1,16 @@
 # AGENTS.md — Instructions for coding agents
 
-Matriz project: project and task management application. Current phase: specification (no code).
+Matriz project: project and task management application. Current phase: design done (Worksheet 02); implementation starts in Worksheet 03.
 
 ## 1. Before any task
 - Read [README.md](README.md) and the `docs/` files relevant to the task:
   - `docs/requirements.md`: requirements and MVP scope.
   - `docs/user-stories.md`: user stories and acceptance criteria.
   - `docs/constraints.md`: constraints, assumptions, security and pending decisions.
+  - `docs/architecture.md`: architecture decision, stack, modules and their rules.
+  - `docs/database.md`: data model, ER diagram, business rules and error cases (D1–D48).
+  - `openapi.yaml`: REST API contract; implement endpoints exactly as specified.
+  - `docs/ui/wireframe.md`: dashboard wireframes and UI rules (labels, languages, themes).
 - If the documentation is silent or contradictory, stop and ask. Do not fill gaps on your own.
 
 ## 2. Scope and decisions
