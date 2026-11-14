@@ -16,6 +16,11 @@
 | US7 | As a project member, I want to comment on a task, so that I can communicate in its context. | FR11 | Medium |
 | US8 | As a Manager or Member testing the system, I want two demo accounts (Manager and Member), so that I can test the permissions. | FR12 | Medium |
 | US9 | As an Admin, I want to create an account for each new employee and assign it the Manager or Member role, so that they can access Matriz with the right permissions. | FR1a | High |
+| US10 | As an Admin, I want to deactivate, reactivate and anonymise accounts and appoint a Manager in any project, so that access follows who is in the company. | FR1b, FR3 | Medium |
+| US11 | As a user, I want to reset a forgotten password by email and change my own password, so that I can always access my account safely. | FR1c, FR1e | High |
+| US12 | As an Admin or a project Manager, I want to see who changed what and when, so that every change can be traced. | FR1d, FR13 | High |
+| US13 | As a user, I want to choose the language (Português or English) and the theme (light, dark or automatic), so that the interface suits me. | NFR1, NFR8 | Medium |
+| US14 | As a user, I want to use Matriz in a mobile browser, so that I can follow the work away from my desk. | NFR7 | Medium |
 
 ## 2. Acceptance criteria
 
@@ -60,6 +65,31 @@
 - **Given** an account already exists with an email, **When** I create another account with the same email, **Then** it is refused.
 - **Given** I am logged in as a Manager or Member, **When** I try to create an account, **Then** the action is refused.
 
+### US10 — Account lifecycle (Admin)
+- **Given** an active Member account, **When** the Admin deactivates it and confirms, **Then** that person cannot log in, is removed from all projects and their past comments show "(left the company)".
+- **Given** a deactivated account, **When** the Admin reactivates it, **Then** the person logs in with a new initial password, must change it, and sees no projects until added again.
+- **Given** a user who is the only Manager of a project, **When** the Admin tries to deactivate them, **Then** it is refused until another Manager is appointed.
+- **Given** a deactivated account, **When** the Admin anonymises it and confirms, **Then** its tasks and comments show "Removed user" and the account cannot be reactivated.
+
+### US11 — Passwords
+- **Given** the login page, **When** I request a reset for any email, **Then** I see the same message whether or not the email exists.
+- **Given** a reset link older than 30 minutes or already used, **When** I open it, **Then** it is refused and I can request a new one.
+- **Given** an account created by the Admin, **When** I log in for the first time, **Then** I must change my password before seeing anything else.
+- **Given** I am logged in, **When** I change my password with a wrong current password, **Then** it is refused.
+
+### US12 — Audit and activity logs
+- **Given** a Member changes a task status, **When** a project Manager opens the project's activity log, **Then** they see who changed it, when, and the old and new status.
+- **Given** I am a Member, **When** I try to open the project's activity log, **Then** it is refused.
+- **Given** the Admin deactivated an account, **When** the Admin opens the user audit log, **Then** the entry shows who did it and when.
+
+### US13 — Language and theme
+- **Given** I choose English, **When** I log in again on another device, **Then** the interface is in English.
+- **Given** any language, **When** I see a task, **Then** status and priority are shown as words in that language, never as codes such as IN_PROGRESS.
+- **Given** the theme is "automatic", **When** my system uses dark mode, **Then** the interface is dark.
+
+### US14 — Mobile
+- **Given** a browser 360 px wide, **When** I open the dashboard, **Then** every element is usable without horizontal scrolling.
+
 ## 3. Exceptional and edge cases
 
 | # | Situation | Expected behaviour |
@@ -69,5 +99,7 @@
 | E3 | Search or filters with no results | "No tasks found" is shown. |
 | E4 | Opening, via direct URL, a project I am not a member of | Access is refused without revealing its content. |
 | E5 | Title made only of spaces, shorter than 3 or longer than 150 characters | It is refused. |
-| E7 | Description longer than 2,000 characters | It is refused. |
 | E6 | The last remaining Manager of a project tries to remove or demote themselves | It is refused; the project always keeps at least one Manager. |
+| E7 | Description longer than 2,000 characters | It is refused. |
+
+Further error cases for each table and operation: [database.md](database.md), section 6.

@@ -16,8 +16,8 @@ info:
     - [D] 404 when the resource does not exist or the user is not a member of its project, so its
       existence is not revealed (E4); 403 when the user is authenticated but not allowed (e.g. the Admin
       account opening tasks, D11).
-    - [D] 400 for a malformed request (invalid JSON, non-numeric id); 422 for well-formed data that breaks
-      a validation rule. Errors use the Problem Details format (RFC 9457), without internal details (NFR5).
+    - [D] 400 only for a malformed request (invalid JSON, unknown field, non-numeric id); 422 for well-formed
+      JSON that breaks a rule, including a wrong type or null where not allowed. Errors use the Problem Details format (RFC 9457), without internal details (NFR5).
 
     Assumptions
     - [A] The backend trims title and description before validating and saving.
@@ -34,7 +34,7 @@ info:
     Error coverage for these two operations (cases from docs/database.md, section 6)
     - 400: malformed JSON, unknown field, non-numeric id.
     - 401: no session, expired session, deactivated account (D8).
-    - 403: Admin account (D11); missing or invalid CSRF token.
+    - 403: Admin account (D11); password change required (D45); missing or invalid CSRF token.
     - 404: project or task does not exist, user not a member (D17), removed member with an open page
       (D18), former creator (D24), deleted while in use (D26).
     - 415: request body not sent as application/json.
@@ -46,7 +46,7 @@ info:
 
     Pending decisions
     - [P] Pagination and the other endpoints (projects, members, comments, dashboard, accounts).
-    - [P] Error message texts (shown in European Portuguese by the frontend, NFR1).
+    - [P] Error message texts (translated by the frontend into the user's language, NFR1).
 servers:
   - url: http://localhost:8080/api
     description: Local development [A]
@@ -391,12 +391,12 @@ components:
                     example: title
                   code:
                     type: string
-                    description: Machine-readable rule; the frontend maps it to a message in European Portuguese.
+                    description: Machine-readable rule; the frontend maps it to a message in the user's language.
                     enum: [REQUIRED, TOO_SHORT, TOO_LONG, BLANK, INVALID_VALUE, INVALID_DATE, DUPLICATE, NOT_A_PROJECT_MEMBER]
 
   responses:
     BadRequest:
-      description: Malformed request (invalid JSON, unknown field, non-numeric id).
+      description: Malformed request (invalid JSON, unknown field, non-numeric id). A wrong type or null is 422.
       content:
         application/problem+json:
           schema:
@@ -416,7 +416,7 @@ components:
             title: Unauthorized
             status: 401
     Forbidden:
-      description: Authenticated but not allowed (e.g. the Admin account, which does not access tasks), or missing CSRF token.
+      description: Authenticated but not allowed (e.g. the Admin account, which does not access tasks), password change required at first login (D45), or missing CSRF token.
       content:
         application/problem+json:
           schema:

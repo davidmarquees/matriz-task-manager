@@ -31,9 +31,10 @@ There is no self-service registration: accounts are created by the Admin. Three 
 |---|---|---|---|
 | FR1 | Users log in with email and password and can log out. | [A] | High |
 | FR1a | The Admin creates user accounts (name, email, initial password) and assigns each the Manager or Member account role. | [A] | High |
-| FR1b | The Admin deactivates and reactivates user accounts. A deactivated user cannot log in, is removed from all projects and is hidden from member lists, selectors and search; their name stays on the tasks and comments they created, with a "left the company" label. A returning person keeps their account and email (reactivation); a person with a different email gets a new account. | [A] | Medium |
+| FR1b | The Admin deactivates and reactivates user accounts. A deactivated user cannot log in, is removed from all projects and is hidden from member lists, selectors and search; their name stays on the tasks and comments they created, with a "left the company" label. A returning person keeps their account and email (reactivation); a person with a different email gets a new account. Deactivating the only Manager of a project is refused until another Manager is appointed. On a GDPR erasure request, the Admin anonymises a deactivated account: name and email are removed and past work shows "Removed user". | [A] | Medium |
 | FR1c | A user who forgot their password requests a reset link by email from the login page; the link is single-use and expires after 30 minutes. The answer is the same whether or not the email exists. | [A] | High |
 | FR1d | Every change to a user's account or memberships is recorded in an audit log (who, what, to whom, when, values before and after). Only the Admin can read it; nobody can change or delete it. | [A] | High |
+| FR1e | A logged-in user changes their own password by entering the current and the new one. When the password was set by the Admin (new or reactivated account), the user must change it at the first login before doing anything else. | [A] | High |
 | FR2 | A Manager account creates projects; the project's Managers edit and delete it (name mandatory, description optional). | G1 | High |
 | FR3 | The project's Managers add and remove members, and promote or demote them between Member and Manager; a project always keeps at least one Manager. The Admin can also appoint any active user as a Manager of any project. | G1 | High |
 | FR4 | A user only sees the projects they are a member of. | [A] | High |
@@ -51,7 +52,8 @@ There is no self-service registration: accounts are created by the Admin. Three 
 
 | Action | Admin | Project Manager | Member |
 |---|---|---|---|
-| Create / deactivate / reactivate accounts | Yes | No | No |
+| Create / deactivate / reactivate / anonymise accounts | Yes | No | No |
+| Change own password, language and theme | Yes | Yes | Yes |
 | Read the user audit log | Yes | No | No |
 | See project names and members | Yes | Yes | Yes (own projects) |
 | Appoint a project Manager (adds the user to the project if needed) | Yes | Yes | No |
@@ -66,12 +68,14 @@ There is no self-service registration: accounts are created by the Admin. Three 
 
 | ID | Requirement |
 |---|---|
-| NFR1 | User interface in European Portuguese. |
+| NFR1 | User interface in European Portuguese and English. Each user chooses the language, and the choice is saved in their profile; the default is European Portuguese. Enumerated values (status, priority, roles) are always shown as translated labels, never as API values such as `IN_PROGRESS`. |
 | NFR2 | Must perform well with at least 50 users and 1,000 tasks; above that, performance is not guaranteed (nothing is blocked). |
 | NFR3 | Passwords are never stored in plain text; reset tokens are stored only as a hash. |
 | NFR4 | All permissions are enforced on the server, not only in the interface. |
 | NFR5 | Clear error messages that do not expose internal details. |
-| NFR6 | Destructive actions (deleting a project or task) ask for confirmation. |
+| NFR6 | Destructive actions ask for confirmation: deleting a project or task, removing or demoting a member, deactivating or anonymising an account. |
+| NFR7 | Responsive web application usable in desktop and mobile browsers (from 360 px wide); no native app. |
+| NFR8 | Light and dark themes. Each user chooses light, dark or "follow the system" (default), and the choice is saved in their profile. Both themes meet WCAG 2.1 AA contrast (at least 4.5:1 for text). |
 
 ## 5. MVP scope
 

@@ -35,6 +35,8 @@
 | A21 | Passwords have at least 8 characters. |
 | A22 | A password reset link expires after 30 minutes; at most 3 reset requests per email per hour. |
 | A23 | Only the project's Managers read its activity log; Members do not. |
+| A24 | Before login, the interface uses the browser's language if it is English, otherwise European Portuguese; after login, the language saved in the profile. Before login, the theme follows the system setting. |
+| A25 | Demo accounts (Manager, Member) are created only in the development environment. The Admin account is created at the first start from environment variables and must change its password at the first login. |
 
 ## 3. Security and privacy
 
@@ -42,7 +44,7 @@
 - All permissions enforced on the server.
 - A user cannot access, even via direct URL, projects they are not a member of.
 - Login messages do not reveal whether the email exists.
-- Minimal personal data (name and email), in line with the GDPR.
+- Minimal personal data, in line with the GDPR: name, email, password hash, language and theme preferences, failed login attempts, and the user's actions in the two logs (`user_audit_log`, `activity_log`). The logs store ids and the names of changed personal fields, never their values (name, email), so anonymising an account also anonymises the logs.
 - Demo accounts use fictitious data and must not exist in a production environment.
 - Credentials and secrets are never stored in the repository.
 
@@ -50,20 +52,20 @@
 
 Decided in Worksheet 02 (see [architecture.md](architecture.md)): modular monolith; Java + Spring Boot, React, PostgreSQL; REST API described in `openapi.yaml`; authentication with a server-side session (Spring Security).
 
-Still pending:
-- Hosting and runtime environment.
-- Testing strategy.
+Still pending: see [architecture.md](architecture.md), section 7 (single list of pending technical decisions).
 
 ## 5. Pending product decisions
 
 - How the passwords of the pre-created accounts (Admin, Manager, Member) are shared without storing them in the repository (e.g. documented outside the repo, or a `.env.example` with placeholder values only). To decide in Worksheet 03.
 - Email sending for password reset: provider (SMTP server) and sender address. Proposed for the course: a local test mail server (e.g. Mailpit), no real emails sent.
-- How a user's personal data is deleted on request (GDPR right to erasure). Proposed: anonymise the deactivated account and keep its tasks and comments (see [database.md](database.md)).
+- How long the two logs are kept (currently indefinitely). To decide with the client.
+
+Decided in Worksheet 02: GDPR erasure is done by anonymising the deactivated account; its tasks and comments stay and show "Removed user" (see [database.md](database.md), section 5).
 
 ## 6. Scope limitations
 
 - No kanban, notifications (the only email sent is the password reset link), attachments, subtasks, project archiving or due-date alerts.
 - Comments cannot be edited or deleted.
-- No self-service registration; the Admin creates, deactivates and reactivates accounts (no editing or deletion in the MVP).
+- No self-service registration; the Admin creates, deactivates, reactivates and anonymises accounts (no editing of name, email or account role, and no deletion, in the MVP). Users change only their own password, language and theme.
 - No Team entity; work is organised by project membership.
 - Tasks are shown in a list view only.

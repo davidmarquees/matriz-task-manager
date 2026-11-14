@@ -1,0 +1,67 @@
+<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#fff;color:#222}
+.box{border:2px solid #333;border-radius:6px}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:2px solid #333}
+.logo{font-weight:bold;font-size:24px;border:2px dashed #333;padding:4px 14px}
+.user{display:flex;gap:14px;align-items:center;font-size:16px}
+.btn{border:2px solid #333;border-radius:6px;padding:7px 14px;background:#fff;font:inherit;font-size:15px}
+.btn.primary{background:#ddd;font-weight:bold}
+main{padding:24px 28px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+h1{margin:0;font-size:28px}.sub{color:#555;margin:0 0 20px;font-size:16px}
+.summary{display:flex;gap:16px;margin-bottom:24px}
+.stat{flex:1;padding:12px 16px}.stat b{font-size:30px;display:block}.stat span{font-size:15px;color:#444}
+h2{font-size:20px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card{padding:16px}.card h3{margin:0 0 4px;font-size:19px}.role{display:inline-block;border:1.5px solid #333;border-radius:12px;padding:1px 10px;font-size:13px;margin-bottom:12px}
+.counts{display:flex;gap:8px;margin-bottom:10px}.c{flex:1;border:1.5px solid #333;border-radius:4px;text-align:center;padding:6px 2px}.c b{display:block;font-size:22px}.c span{font-size:12px}
+.bar{height:12px;border:1.5px solid #333;border-radius:3px;display:flex;margin-bottom:12px;overflow:hidden}.bar i{display:block}
+.meta{font-size:13px;color:#555;margin-bottom:12px}
+.n{display:inline-block;background:#fff6a8;border:1.5px solid #9a8a00;border-radius:50%;width:24px;height:24px;line-height:21px;text-align:center;font:bold 14px Arial;margin:0 6px;vertical-align:middle}
+.legend{margin-top:20px;border-top:2px dashed #999;padding-top:12px;font:14px Arial;color:#333}.legend li{margin:3px 0}
+html.dark body{background:#1e1e1e;color:#e6e6e6}html.dark .box,html.dark .btn,html.dark .c,html.dark .bar,html.dark .lang,html.dark .role,html.dark header,html.dark .logo{border-color:#bbb}
+html.dark .btn{background:#2a2a2a;color:#e6e6e6}html.dark .btn.primary{background:#555}html.dark .sub,html.dark .meta,html.dark .stat span,html.dark .legend{color:#c8c8c8}
+html.dark .bar i[style*="#fff"]{background:#1e1e1e!important}html.dark .bar i[style*="#444"]{background:#ddd!important}html.dark .n{background:#5a5320;color:#fff;border-color:#c9b600}
+.lang{white-space:nowrap;border:1.5px solid #333;border-radius:12px;padding:2px 10px;font-size:14px}.show-m{display:none}
+@media (max-width:600px){header{padding:10px 16px}.logo{font-size:18px}.hide-m{display:none!important}.show-m{display:inline-block}
+main{padding:16px}.top{flex-direction:column;align-items:flex-start;gap:10px}h1{font-size:24px}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{padding:10px}.stat b{font-size:24px}
+.grid{grid-template-columns:1fr;gap:12px}.legend{font-size:13px}.legend ol{padding-left:20px}.user{gap:8px}}
+.note{position:absolute;background:#fff6a8;border:1.5px solid #9a8a00;padding:6px 10px;font-size:13px;max-width:230px;font-family:Arial,sans-serif}
+.empty{color:#555;font-style:italic;text-align:center;padding:30px}
+</style></head><body style="position:relative">
+<header><div class="logo">MATRIZ</div>
+<div class="user"><span class="lang hide-m"><b>PT</b> | EN</span><span class="n hide-m">8</span><span class="lang hide-m" title="Tema">☀ | ☾ | Auto</span><span class="n hide-m">9</span><span class="hide-m">Painel</span><span class="hide-m">|</span><span class="hide-m">👤 Rita Gomes · Gestor</span><button class="btn hide-m">Terminar sessão</button><button class="btn show-m">☰</button><span class="n">1</span></div></header>
+<main>
+<div class="top"><h1>Painel</h1><div><span class="n">2</span><button class="btn primary">+ Novo projeto</button></div></div>
+<p class="sub">Projetos de que é membro e as respetivas tarefas por estado.</p>
+<div style="margin-bottom:6px"><span class="n" style="margin-left:0">3</span></div><div class="summary">
+<div class="box stat"><b>3</b><span>Projetos</span></div>
+<div class="box stat"><b>9</b><span>A fazer</span></div>
+<div class="box stat"><b>4</b><span>Em curso</span></div>
+<div class="box stat"><b>7</b><span>Concluídas</span></div></div>
+<h2>Os meus projetos</h2>
+<div class="grid">
+<div class="box card"><h3>Website Redesign</h3><span class="role">Gestor</span><span class="n">4</span>
+<div class="counts"><div class="c"><b>3</b><span>A fazer</span></div><div class="c"><b>2</b><span>Em curso</span></div><div class="c"><b>1</b><span>Concluídas</span></div></div>
+<div class="bar"><i style="width:50%;background:#fff"></i><i style="width:33%;background:#aaa"></i><i style="width:17%;background:#444"></i></div>
+<div class="meta">6 tarefas · 4 membros</div><button class="btn">Abrir projeto →</button><span class="n">6</span></div>
+<div class="box card"><h3>Onboarding Guide</h3><span class="role">Membro</span>
+<div class="counts"><div class="c"><b>6</b><span>A fazer</span></div><div class="c"><b>2</b><span>Em curso</span></div><div class="c"><b>6</b><span>Concluídas</span></div></div>
+<div class="bar"><i style="width:43%;background:#fff"></i><i style="width:14%;background:#aaa"></i><i style="width:43%;background:#444"></i></div>
+<div class="meta">14 tarefas · 6 membros</div><button class="btn">Abrir projeto →</button></div>
+<div class="box card"><h3>Q1 Planning</h3><span class="role">Gestor</span><span class="n">5</span>
+<div class="counts"><div class="c"><b>0</b><span>A fazer</span></div><div class="c"><b>0</b><span>Em curso</span></div><div class="c"><b>0</b><span>Concluídas</span></div></div>
+<div class="bar"></div>
+<div class="meta">Ainda sem tarefas · 2 membros</div><button class="btn">Abrir projeto →</button></div>
+</div>
+<div class="legend"><b>Annotations</b> (low-fidelity wireframe; fictitious data; UI shown in European Portuguese; English also available, NFR1)<ol>
+<li>Logged-in user's name and account role; log out (FR1).</li>
+<li>“New project” shown only to Manager accounts (FR2, D9).</li>
+<li>Totals across all projects the user is a member of (FR9).</li>
+<li>User's role in each project: Gestor (Manager) or Membro (Member) (A1). Counts per status, with a progress bar (FR9, A9).</li>
+<li>Project with no tasks shows 0 / 0 / 0 without errors (E2).</li>
+<li>Opens the project's task list (FR5, FR10). Only projects where the user is a member are listed (FR4).</li>
+<li>Empty state (no projects): “Ainda não pertence a nenhum projeto.”</li><li>Language switch: Português (PT-PT) or English; the choice is saved in the user's profile (NFR1).</li><li>Theme switch: light, dark or follow the system (default); saved in the user's profile (NFR8).</li></ol><p>Status and priority are always shown as translated labels, never as API values such as TODO or IN_PROGRESS. On mobile, the name, role, “Terminar sessão” and the language and theme switches move into the ☰ menu.</p></div>
+</main>
+</body></html>
