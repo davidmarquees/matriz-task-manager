@@ -11,7 +11,7 @@
 | US2 | As a Manager, I want to create, edit and delete projects and manage their members, so that I can organise the team's work. | FR2, FR3 | High |
 | US3 | As a project member, I want to create, edit and delete tasks with a title, status and priority, so that I can manage the work. | FR5–FR7 | High |
 | US4 | As a project member, I want to assign a task to one or more members, so that it is clear who does it. | FR8 | High |
-| US5 | As a project member, I want to see a dashboard with the number of tasks in each status, so that I can track progress. | FR9 | High |
+| US5 | As a project member, I want to see a dashboard with my projects and the number of tasks in each status, so that I can track progress. | FR9 | High |
 | US6 | As a project member, I want to search tasks by text and filter them by status, priority and assignee, so that I find what I need. | FR10 | Medium |
 | US7 | As a project member, I want to comment on a task, so that I can communicate in its context. | FR11 | Medium |
 | US8 | As a Manager or Member testing the system, I want two demo accounts (Manager and Member), so that I can test the permissions. | FR12 | Medium |
@@ -68,5 +68,6 @@
 | E2 | Project with no tasks | The dashboard shows 0, 0 and 0, without errors. |
 | E3 | Search or filters with no results | "No tasks found" is shown. |
 | E4 | Opening, via direct URL, a project I am not a member of | Access is refused without revealing its content. |
-| E5 | Title made only of spaces or longer than 200 characters | It is refused. |
+| E5 | Title made only of spaces, shorter than 3 or longer than 150 characters | It is refused. |
+| E7 | Description longer than 2,000 characters | It is refused. |
 | E6 | The last remaining Manager of a project tries to remove or demote themselves | It is refused; the project always keeps at least one Manager. |

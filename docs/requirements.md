@@ -34,11 +34,11 @@ There is no self-service registration: accounts are created by the Admin. Three 
 | FR2 | A Manager account creates projects; the project's Managers edit and delete it (name mandatory, description optional). | G1 | High |
 | FR3 | The project's Managers add and remove members, and promote or demote them between Member and Manager; a project always keeps at least one Manager. | G1 | High |
 | FR4 | A user only sees the projects they are a member of. | [A] | High |
-| FR5 | Project members create and edit tasks, and delete them according to the permission rules below. Fields: title (mandatory, max. 200 characters, see A6), description, status, priority, due date (optional, any date accepted), assignees. | G2 | High |
+| FR5 | Project members create and edit tasks, and delete them according to the permission rules below. Fields: title (mandatory, 3 to 150 characters, not only spaces, see A6), description (optional, max. 2,000 characters, see A20), status, priority, due date (optional, any date accepted), assignees. | G2 | High |
 | FR6 | Task status: TODO, IN_PROGRESS or DONE; free transitions. | [A] | High |
 | FR7 | Task priority: LOW, MEDIUM or HIGH. | [A] | High |
 | FR8 | A task can have several assignees, all members of the project. | [A] | High |
-| FR9 | Per-project dashboard with the number of tasks in each status. | G3 | High |
+| FR9 | Dashboard listing the projects the user is a member of, each with the number of tasks in each status. | G3 | High |
 | FR10 | Task text search (title and description) and filters by status, priority and assignee. | [A] | Medium |
 | FR11 | Project members comment on tasks (plain text). | [A] | Medium |
 | FR12 | Three pre-created accounts exist: Admin, Manager and Member; the Manager and Member accounts are the demo accounts for testing permissions. | [A] | Medium |

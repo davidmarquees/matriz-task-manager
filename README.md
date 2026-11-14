@@ -32,8 +32,13 @@ These features are based on assumptions not yet confirmed by the client; see [do
 | [docs/requirements.md](docs/requirements.md) | Vision, users, functional and non-functional requirements, MVP scope |
 | [docs/user-stories.md](docs/user-stories.md) | User stories, priorities, acceptance criteria, edge cases |
 | [docs/constraints.md](docs/constraints.md) | Constraints, assumptions, security and privacy, pending decisions |
+| [docs/architecture.md](docs/architecture.md) | Architecture decision, technology stack, components |
 | [AGENTS.md](AGENTS.md) | Instructions for coding agents |
+
+## Architecture
+
+Modular monolith: one Java + Spring Boot backend split into business modules, a React frontend and one PostgreSQL database. It is the simplest option that fits the MVP (one deployment, one database, easy to test) while keeping the code organised by module. See [docs/architecture.md](docs/architecture.md) for the comparison and the reasons.
 
 ## Current status
 
-Specification phase (Worksheet 01). There is no code and no technical decisions yet; the architecture will be defined in the next phase.
+Design phase (Worksheet 02). There is no code yet.
