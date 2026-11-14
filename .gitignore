@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDEs / editores
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# Variáveis de ambiente e segredos
+.env
+.env.*
+!.env.example
+
+# Java / Maven / Gradle (Ficha 03)
+target/
+build/
+.gradle/
+*.class
+*.log
+
+# Node / React (Ficha 03)
+node_modules/
+dist/
+coverage/
+
+# Testes E2E (Ficha 04)
+playwright-report/
+test-results/
