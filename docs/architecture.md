@@ -61,7 +61,9 @@ React SPA (pt-PT UI)
 Spring Boot application (modular monolith)
   ├── web / api layer ──── controllers, request validation, error format (NFR5)
   ├── security ─────────── authentication, sessions, login lockout, authorization checks
-  ├── accounts module ──── users and account roles (Admin, Manager, Member)
+  ├── accounts module ──── users, account roles, deactivation, password reset
+  ├── audit module ─────── append-only log of changes to users and memberships
+  ├── email adapter ────── sends the password reset email (SMTP)
   ├── projects module ──── projects, project members, project roles
   ├── tasks module ─────── tasks, assignees, search and filters
   ├── comments module ──── task comments
@@ -76,7 +78,9 @@ PostgreSQL
 | Frontend (React SPA) | Screens in European Portuguese, forms and client-side validation (for usability only), confirmation before destructive actions, redirect to login when not authenticated. | NFR1, NFR6, US1 |
 | API layer | REST endpoints, input validation, consistent error responses without internal details, HTTP status codes. | NFR5 |
 | Security | Login and logout, session timeout, lockout after 5 failed attempts, generic login error, per-request authorization (account role and project role). | FR1, NFR3, NFR4, A17, A18 |
-| Accounts | Admin creates accounts (name, email, initial password, account role); unique email; seed of the three pre-created accounts. | FR1a, FR12, US9 |
+| Accounts | Admin creates, deactivates and reactivates accounts; unique email; password reset with single-use tokens; seed of the three pre-created accounts. | FR1a–FR1c, FR12, US9 |
+| Audit | Records every change to a user's account or memberships in the same transaction as the change; read-only list for the Admin. | FR1d |
+| Email adapter | Sends the reset email through SMTP; behind an interface so the provider can change. | FR1c |
 | Projects | Project CRUD by Managers, membership, promote and demote, at least one Manager per project, visibility limited to members. | FR2–FR4, E4, E6 |
 | Tasks | Task CRUD with defaults (TODO, MEDIUM), delete rules, several assignees who must be members, search and filters. | FR5–FR8, FR10, E1, E5 |
 | Comments | Add and list comments with author and date; no edit or delete. | FR11, A14 |
@@ -99,5 +103,6 @@ PostgreSQL
 
 - [P] Hosting and runtime environment (e.g. Docker Compose locally).
 - [P] Testing strategy (unit, integration, end-to-end).
+- [P] SMTP provider for the reset email (local test server proposed for the course).
 - [P] Exact versions (Java, Spring Boot, React, PostgreSQL).
 - [P] How the pre-created account passwords are shared (constraints.md, section 5).

@@ -32,6 +32,8 @@
 | A18 | A session expires after 30 minutes of inactivity. |
 | A19 | The due date is optional and any date is accepted (past dates included). |
 | A20 | The description is optional and has at most 2,000 characters. |
+| A21 | Passwords have at least 8 characters. |
+| A22 | A password reset link expires after 30 minutes; at most 3 reset requests per email per hour. |
 
 ## 3. Security and privacy
 
@@ -54,12 +56,13 @@ Still pending:
 ## 5. Pending product decisions
 
 - How the passwords of the pre-created accounts (Admin, Manager, Member) are shared without storing them in the repository (e.g. documented outside the repo, or a `.env.example` with placeholder values only). To decide in Worksheet 03.
-- How a user's personal data is deleted on request (GDPR right to erasure).
+- Email sending for password reset: provider (SMTP server) and sender address. Proposed for the course: a local test mail server (e.g. Mailpit), no real emails sent.
+- How a user's personal data is deleted on request (GDPR right to erasure). Proposed: anonymise the deactivated account and keep its tasks and comments (see [database.md](database.md)).
 
 ## 6. Scope limitations
 
-- No kanban, notifications, attachments, subtasks, history, project archiving or due-date alerts.
+- No kanban, notifications (the only email sent is the password reset link), attachments, subtasks, history of projects and tasks, project archiving or due-date alerts.
 - Comments cannot be edited or deleted.
-- No self-service registration; the Admin only creates accounts (no editing or deactivation in the MVP).
+- No self-service registration; the Admin creates, deactivates and reactivates accounts (no editing or deletion in the MVP).
 - No Team entity; work is organised by project membership.
 - Tasks are shown in a list view only.
