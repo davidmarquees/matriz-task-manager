@@ -1,0 +1,493 @@
+openapi: 3.1.0
+info:
+  title: Matriz API
+  version: 0.1.0
+  summary: REST API of Matriz, a project and task management application (MVP).
+  description: |
+    Simplified contract for Worksheet 02. Three operations are documented:
+    creating a task in a project, reading a task and updating a task.
+
+    Legend: [D] confirmed decision · [A] assumption (to be confirmed) · [P] pending decision.
+
+    Decisions
+    - [D] REST + JSON; authentication with a server-side session cookie (docs/architecture.md).
+    - [D] Title 3 to 150 characters after trimming, not only spaces; description up to 2,000 (A6, A20).
+    - [D] Status TODO | IN_PROGRESS | DONE, default TODO; priority LOW | MEDIUM | HIGH, default MEDIUM (A5).
+    - [D] 404 when the resource does not exist or the user is not a member of its project, so its
+      existence is not revealed (E4); 403 when the user is authenticated but not allowed (e.g. the Admin
+      account opening tasks, D11).
+    - [D] 400 for a malformed request (invalid JSON, non-numeric id); 422 for well-formed data that breaks
+      a validation rule. Errors use the Problem Details format (RFC 9457), without internal details (NFR5).
+
+    Assumptions
+    - [A] The backend trims title and description before validating and saving.
+    - [A] Unsafe requests (POST, PUT, PATCH, DELETE) send the CSRF token (Spring Security default) in the
+      X-XSRF-TOKEN header.
+    - [A] Assignees can be set when the task is created; the user ids must be active members of the project.
+    - [A] Comments are not included in the task; they will have their own endpoint.
+    - [A] All paths are under the /api prefix.
+    - [D] Every write operation records an activity log entry in the same transaction (FR13);
+      clients do not send anything for it.
+    - [D] Updates use PATCH with only the fields that change, plus the task's current `version`
+      (optimistic locking, D25).
+
+    Error coverage for these two operations (cases from docs/database.md, section 6)
+    - 400: malformed JSON, unknown field, non-numeric id.
+    - 401: no session, expired session, deactivated account (D8).
+    - 403: Admin account (D11); missing or invalid CSRF token.
+    - 404: project or task does not exist, user not a member (D17), removed member with an open page
+      (D18), former creator (D24), deleted while in use (D26).
+    - 415: request body not sent as application/json.
+    - 422: title, description, status, priority or due date invalid (D20); duplicate assignee (D21);
+      assignee not an active project member, including one removed at the same moment (D22).
+    - 500: unexpected error or database unavailable; nothing saved (D28, D29).
+    - 409 (update only): the task was changed by someone else since it was read (D25).
+    - Not applicable here: 429.
+
+    Pending decisions
+    - [P] Pagination and the other endpoints (projects, members, comments, dashboard, accounts).
+    - [P] Error message texts (shown in European Portuguese by the frontend, NFR1).
+servers:
+  - url: http://localhost:8080/api
+    description: Local development [A]
+security:
+  - sessionCookie: []
+tags:
+  - name: Tasks
+    description: Tasks of a project (FR5–FR8).
+
+paths:
+  /projects/{projectId}/tasks:
+    post:
+      tags: [Tasks]
+      operationId: createTask
+      summary: Create a task in a project
+      description: |
+        Any member of the project (Manager or Member) can create a task (FR5, US3).
+        The authenticated user becomes the task creator (`createdBy`).
+        Status and priority default to TODO and MEDIUM when omitted.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreateRequest'
+            examples:
+              minimal:
+                summary: Only the mandatory field
+                value:
+                  title: Fix login error message
+              full:
+                summary: All fields
+                value:
+                  title: Write the sprint report
+                  description: Summary of the tasks completed this week.
+                  status: IN_PROGRESS
+                  priority: HIGH
+                  dueDate: '2026-12-01'
+                  assigneeIds: [2, 3]
+      responses:
+        '201':
+          description: Task created.
+          headers:
+            Location:
+              description: URL of the new task.
+              schema:
+                type: string
+                example: /api/tasks/42
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tasks/{taskId}:
+    get:
+      tags: [Tasks]
+      operationId: getTask
+      summary: Get a task
+      description: Any member of the task's project can read it (FR4, FR5).
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: The task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Tasks]
+      operationId: updateTask
+      summary: Update a task
+      description: |
+        Any member of the task's project can update it, including tasks they did not create (A13).
+        Only the fields sent are changed; `version` is mandatory. When sent, `assigneeIds` replaces
+        the whole list of assignees. The task cannot be moved to another project (D27).
+        The change is recorded in the project's activity log (FR13).
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdateRequest'
+            examples:
+              changeStatus:
+                summary: Move a task to DONE
+                value:
+                  version: 3
+                  status: DONE
+              clearDueDate:
+                summary: Remove the due date and change the assignees
+                value:
+                  version: 4
+                  dueDate: null
+                  assigneeIds: [3]
+      responses:
+        '200':
+          description: Task updated; `version` is incremented when something changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+      description: Server-side session cookie (HttpOnly) set at login; expires after 30 minutes of inactivity (A18).
+
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    CsrfToken:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: CSRF token read from the XSRF-TOKEN cookie [A].
+      schema:
+        type: string
+
+  schemas:
+    Id:
+      type: integer
+      format: int64
+      minimum: 1
+      example: 42
+
+    TaskStatus:
+      type: string
+      enum: [TODO, IN_PROGRESS, DONE]
+
+    TaskPriority:
+      type: string
+      enum: [LOW, MEDIUM, HIGH]
+
+    TaskCreateRequest:
+      type: object
+      required: [title]
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 150
+          pattern: '^\s*\S.{1,148}\S\s*$'
+          description: Mandatory. 3 to 150 characters after trimming; cannot be only spaces.
+        description:
+          type: [string, 'null']
+          maxLength: 2000
+          description: Optional. Up to 2,000 characters.
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+          default: TODO
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+          default: MEDIUM
+        dueDate:
+          type: [string, 'null']
+          format: date
+          description: Optional; any date is accepted, past dates included (A19).
+        assigneeIds:
+          type: array
+          uniqueItems: true
+          default: []
+          description: Optional. Ids of active members of the project; no duplicates (FR8).
+          items:
+            $ref: '#/components/schemas/Id'
+
+    TaskUpdateRequest:
+      type: object
+      required: [version]
+      minProperties: 2
+      additionalProperties: false
+      description: Partial update. At least one field besides `version`. Same rules as on creation.
+      properties:
+        version:
+          type: integer
+          minimum: 0
+          description: The `version` of the task as last read by the client.
+        title:
+          type: string
+          minLength: 3
+          maxLength: 150
+          pattern: '^\s*\S.{1,148}\S\s*$'
+          description: 3 to 150 characters after trimming; cannot be only spaces. Cannot be set to null.
+        description:
+          type: [string, 'null']
+          maxLength: 2000
+          description: Up to 2,000 characters; null clears it.
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        dueDate:
+          type: [string, 'null']
+          format: date
+          description: Any date; null clears it.
+        assigneeIds:
+          type: array
+          uniqueItems: true
+          description: Replaces the whole list. Ids of active members of the project; empty list removes all.
+          items:
+            $ref: '#/components/schemas/Id'
+
+    UserSummary:
+      type: object
+      required: [id, name, active]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        name:
+          type: string
+          example: Ana Silva
+        active:
+          type: boolean
+          description: false when the account was deactivated; the frontend shows the "left the company" label.
+
+    Task:
+      type: object
+      required: [id, projectId, title, status, priority, assignees, createdBy, createdAt, updatedAt, version]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        projectId:
+          $ref: '#/components/schemas/Id'
+        title:
+          type: string
+          example: Fix login error message
+        description:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        dueDate:
+          type: [string, 'null']
+          format: date
+        assignees:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserSummary'
+        createdBy:
+          $ref: '#/components/schemas/UserSummary'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          description: Used for optimistic locking when the task is updated (D25).
+
+    Problem:
+      type: object
+      description: Problem Details (RFC 9457). Never contains stack traces or internal details (NFR5).
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          example: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+
+    ValidationProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [errors]
+          properties:
+            errors:
+              type: array
+              items:
+                type: object
+                required: [field, code]
+                properties:
+                  field:
+                    type: string
+                    example: title
+                  code:
+                    type: string
+                    description: Machine-readable rule; the frontend maps it to a message in European Portuguese.
+                    enum: [REQUIRED, TOO_SHORT, TOO_LONG, BLANK, INVALID_VALUE, INVALID_DATE, DUPLICATE, NOT_A_PROJECT_MEMBER]
+
+  responses:
+    BadRequest:
+      description: Malformed request (invalid JSON, unknown field, non-numeric id).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+    Unauthorized:
+      description: Not authenticated, session expired or account deactivated.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Unauthorized
+            status: 401
+    Forbidden:
+      description: Authenticated but not allowed (e.g. the Admin account, which does not access tasks), or missing CSRF token.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+    NotFound:
+      description: The resource does not exist or the user is not a member of its project (E4).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+    ValidationError:
+      description: The data breaks a validation rule.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ValidationProblem'
+          examples:
+            blankTitle:
+              summary: Title made only of spaces
+              value:
+                type: about:blank
+                title: Unprocessable Content
+                status: 422
+                errors:
+                  - field: title
+                    code: BLANK
+            notMember:
+              summary: Assignee is not an active project member
+              value:
+                type: about:blank
+                title: Unprocessable Content
+                status: 422
+                errors:
+                  - field: assigneeIds
+                    code: NOT_A_PROJECT_MEMBER
+    Conflict:
+      description: The task was changed by someone else since the client read it; reload and try again (D25).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            detail: The task was changed by another user.
+    UnsupportedMediaType:
+      description: The request body is not application/json.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Unsupported Media Type
+            status: 415
+    InternalError:
+      description: Unexpected error; nothing was saved (D28).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Internal Server Error
+            status: 500

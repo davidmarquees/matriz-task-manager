@@ -34,6 +34,7 @@
 | A20 | The description is optional and has at most 2,000 characters. |
 | A21 | Passwords have at least 8 characters. |
 | A22 | A password reset link expires after 30 minutes; at most 3 reset requests per email per hour. |
+| A23 | Only the project's Managers read its activity log; Members do not. |
 
 ## 3. Security and privacy
 
@@ -61,7 +62,7 @@ Still pending:
 
 ## 6. Scope limitations
 
-- No kanban, notifications (the only email sent is the password reset link), attachments, subtasks, history of projects and tasks, project archiving or due-date alerts.
+- No kanban, notifications (the only email sent is the password reset link), attachments, subtasks, project archiving or due-date alerts.
 - Comments cannot be edited or deleted.
 - No self-service registration; the Admin creates, deactivates and reactivates accounts (no editing or deletion in the MVP).
 - No Team entity; work is organised by project membership.

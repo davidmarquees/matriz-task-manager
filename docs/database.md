@@ -15,6 +15,7 @@
 | `comments` | Comments on a task, with author and date. | FR11 |
 | `password_reset_tokens` | Single-use, time-limited password reset tokens. | FR1c |
 | `user_audit_log` | Append-only record of every change to a user's account or memberships. | FR1d |
+| `activity_log` | Append-only record of every change inside a project (project, members, tasks, assignees, comments). | FR13 |
 
 ### Requirements coverage
 
@@ -25,6 +26,7 @@
 | FR1b Admin deactivates accounts | users | `status`, `deactivated_at` |
 | FR1c password recovery | password_reset_tokens, users | |
 | FR1d user audit log | user_audit_log | |
+| FR13 project activity log | activity_log | |
 | FR2 projects | projects | |
 | FR3 members and roles | project_members | `project_role` |
 | FR4 visibility | project_members | a project is visible only with a membership row |
@@ -49,6 +51,7 @@ Every requirement is covered; no other entity is needed for the MVP. Sessions ar
 | comments | members | members | — (A14) | only by project cascade (A14) |
 | password_reset_tokens | system, on request | system | system (mark as used) | — (kept until cleanup [A]) |
 | user_audit_log | system, in the same transaction as the change | Admin | never | never |
+| activity_log | system, in the same transaction as the change | project Managers | never | never |
 
 ## 2. Attributes
 
@@ -154,6 +157,26 @@ Actions: `ACCOUNT_CREATED`, `ACCOUNT_DEACTIVATED`, `ACCOUNT_REACTIVATED`, `PASSW
 - Append-only: the application's database user has `INSERT` and `SELECT` only on this table [A].
 - Removals caused by a project delete or by a deactivation are logged one entry per membership.
 
+### activity_log
+| Column | Type | Rules |
+|---|---|---|
+| id | bigint | PK |
+| project_id | bigint | project where the change happened; no FK, so entries survive a project delete |
+| project_name | varchar(100) | copy of the project name at the time |
+| actor_id | bigint | FK → users.id; who made the change |
+| entity_type | varchar(15) | `PROJECT`, `MEMBER`, `TASK`, `ASSIGNEE`, `COMMENT` |
+| entity_id | bigint | id of the changed row (task id, comment id, user id for members and assignees) |
+| action | varchar(15) | `CREATED`, `UPDATED`, `DELETED`, `ADDED`, `REMOVED` |
+| changes | jsonb | nullable; changed fields with old and new values, e.g. `{"status": {"old": "TODO", "new": "DONE"}}` |
+| created_at | timestamptz | mandatory |
+
+- Written by the backend in every write operation, in the same transaction as the change; no change without an entry.
+- Append-only, like `user_audit_log`: the application's database user has `INSERT` and `SELECT` only [A].
+- Comment text is not copied into `changes` (the comment row keeps it); a deleted task keeps its title in `changes` so the entry stays readable.
+- Membership changes are written to both logs: `user_audit_log` (the user's history, for the Admin) and `activity_log` (the project's history, for its Managers) [D].
+- Index on (`project_id`, `created_at`).
+- [D] The activity of a deleted project is kept for the record but nobody reads it through the API in the MVP.
+
 ## 3. Relationships and cardinalities
 
 | Relationship | Cardinality | Notes |
@@ -167,6 +190,8 @@ Actions: `ACCOUNT_CREATED`, `ACCOUNT_DEACTIVATED`, `ACCOUNT_REACTIVATED`, `PASSW
 | users – projects (created_by) | 1:N | A project has exactly 1 creator. |
 | users – password_reset_tokens | 1:N | A user has 0..N tokens; at most one unused and valid at a time. |
 | users – user_audit_log | 1:N (twice) | As actor (0..1 per entry) and as target (exactly 1 per entry). |
+| users – activity_log | 1:N | Each entry has exactly 1 actor. |
+| projects – activity_log | 1:N, no FK | Entries keep `project_id` after the project is deleted. |
 
 ## 4. ER diagram
 
@@ -231,6 +256,20 @@ erDiagram
     USERS ||--o{ PASSWORD_RESET_TOKENS : "requests"
     USERS ||--o{ USER_AUDIT_LOG : "acts (actor)"
     USERS ||--o{ USER_AUDIT_LOG : "is changed (target)"
+    USERS ||--o{ ACTIVITY_LOG : "acts"
+    PROJECTS |o..o{ ACTIVITY_LOG : "history (no FK)"
+
+    ACTIVITY_LOG {
+        bigint id PK
+        bigint project_id
+        varchar project_name
+        bigint actor_id FK
+        varchar entity_type "PROJECT | MEMBER | TASK | ASSIGNEE | COMMENT"
+        bigint entity_id
+        varchar action "CREATED | UPDATED | DELETED | ADDED | REMOVED"
+        jsonb changes
+        timestamptz created_at
+    }
 
     PASSWORD_RESET_TOKENS {
         bigint id PK
@@ -309,6 +348,10 @@ Responses: **400** malformed request (e.g. non-numeric id); **401** not authenti
 | D37 | Writing the audit entry fails | The change itself is rolled back (same transaction); no change without a record | DB transaction | 500 |
 | D38 | Manager or Member tries to read the audit log | Refused | backend | 403 |
 | D39 | Anyone tries to change or delete an audit entry | Not possible: no API operation, and the database user has no `UPDATE` or `DELETE` on the table | DB permissions | — |
+| D40 | Writing the activity entry fails | The change itself is rolled back (same transaction) | DB transaction | 500 |
+| D41 | Member (not Manager) or Admin tries to read a project's activity log | Refused | backend | 403 |
+| D42 | Non-member tries to read a project's activity log | Refused without revealing the project | backend | 404 |
+| D43 | Update with no real change (same values) | Saved without a new `version` and without an activity entry | backend | 200 |
 
 ### Projects and members
 
@@ -337,7 +380,7 @@ Responses: **400** malformed request (e.g. non-numeric id); **401** not authenti
 | D24 | Task creator is no longer a member | Cannot delete it (no access); Managers still can | backend | 404 for the former member |
 | D25 | Two users edit the same task or project at the same time | Second save refused; the user reloads and retries | DB `version` column (optimistic locking) | 409 |
 | D26 | Task or project deleted while another user is viewing, editing or commenting | The next request finds nothing | DB | 404 |
-| D27 | Moving a task to another project | Not allowed in the MVP (`project_id` cannot change) | backend | 422 |
+| D27 | Moving a task to another project | Not allowed in the MVP: `projectId` is not an accepted field in an update | API validation | 400 |
 
 ### System failures
 
@@ -347,10 +390,6 @@ Responses: **400** malformed request (e.g. non-numeric id); **401** not authenti
 | D29 | Failure in the middle of a multi-step change (e.g. deactivation, project delete) | Whole change in one transaction | DB transaction | 500, no partial change |
 
 New users and users added later are not affected by existing data: their access depends only on their own rows, old rows are never reused, and a returning person is reactivated rather than duplicated.
-
-### Known gaps (out of MVP scope)
-
-- No history of changes to projects, tasks and comments; only changes to users and memberships are audited (FR1d).
 
 ## 7. Assumptions
 
@@ -364,5 +403,7 @@ New users and users added later are not affected by existing data: their access 
 - [A] Sessions are kept in the application's memory (Spring Security default), not in the database; a restart logs everyone out.
 
 ## 8. Pending decisions
+
+- [P] Endpoint to read a project's activity log (paginated), to add with the other endpoints.
 
 - [P] GDPR erasure on request: proposed approach is to anonymise the deactivated account (name replaced by "Former user", email by a unique placeholder, password removed) and keep its tasks and comments. To confirm.

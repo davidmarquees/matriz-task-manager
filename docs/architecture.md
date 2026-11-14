@@ -62,7 +62,7 @@ Spring Boot application (modular monolith)
   ├── web / api layer ──── controllers, request validation, error format (NFR5)
   ├── security ─────────── authentication, sessions, login lockout, authorization checks
   ├── accounts module ──── users, account roles, deactivation, password reset
-  ├── audit module ─────── append-only log of changes to users and memberships
+  ├── audit module ─────── append-only logs: user changes and project activity
   ├── email adapter ────── sends the password reset email (SMTP)
   ├── projects module ──── projects, project members, project roles
   ├── tasks module ─────── tasks, assignees, search and filters
@@ -79,7 +79,7 @@ PostgreSQL
 | API layer | REST endpoints, input validation, consistent error responses without internal details, HTTP status codes. | NFR5 |
 | Security | Login and logout, session timeout, lockout after 5 failed attempts, generic login error, per-request authorization (account role and project role). | FR1, NFR3, NFR4, A17, A18 |
 | Accounts | Admin creates, deactivates and reactivates accounts; unique email; password reset with single-use tokens; seed of the three pre-created accounts. | FR1a–FR1c, FR12, US9 |
-| Audit | Records every change to a user's account or memberships in the same transaction as the change; read-only list for the Admin. | FR1d |
+| Audit | Records every change to a user's account or memberships (read by the Admin) and every change inside a project (read by its Managers), in the same transaction as the change. | FR1d, FR13 |
 | Email adapter | Sends the reset email through SMTP; behind an interface so the provider can change. | FR1c |
 | Projects | Project CRUD by Managers, membership, promote and demote, at least one Manager per project, visibility limited to members. | FR2–FR4, E4, E6 |
 | Tasks | Task CRUD with defaults (TODO, MEDIUM), delete rules, several assignees who must be members, search and filters. | FR5–FR8, FR10, E1, E5 |

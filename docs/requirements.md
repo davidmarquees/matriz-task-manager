@@ -45,6 +45,7 @@ There is no self-service registration: accounts are created by the Admin. Three 
 | FR10 | Task text search (title and description) and filters by status, priority and assignee. | [A] | Medium |
 | FR11 | Project members comment on tasks (plain text). | [A] | Medium |
 | FR12 | Three pre-created accounts exist: Admin, Manager and Member; the Manager and Member accounts are the demo accounts for testing permissions. | [A] | Medium |
+| FR13 | Every change inside a project (project data, members, tasks, assignees, comments) is recorded in an activity log: who, what, when, values before and after. The project's Managers can read it; nobody can change or delete it. | [A] | High |
 
 ### Permission rules [A]
 
@@ -58,6 +59,7 @@ There is no self-service registration: accounts are created by the Admin. Three 
 | Manage project members | No | Yes | No |
 | See, create / edit task | No | Yes | Yes |
 | Delete task | No | Yes | Only tasks they created |
+| Read the project activity log | No | Yes | No |
 | Comment | No | Yes | Yes |
 
 ## 4. Non-functional requirements [A]
@@ -73,8 +75,8 @@ There is no self-service registration: accounts are created by the Admin. Three 
 
 ## 5. MVP scope
 
-FR1 to FR12, with tasks shown in a list view.
+FR1 to FR13, with tasks shown in a list view.
 
 ## 6. Out of initial scope
 
-Kanban board, Team entity, notifications, attachments, subtasks, history and audit of projects, tasks and comments, project archiving, due-date alerts, self-service user registration, editing and deleting comments, editing accounts after creation (accounts are only deactivated, never deleted).
+Kanban board, Team entity, notifications, attachments, subtasks, project archiving, due-date alerts, self-service user registration, editing and deleting comments, editing accounts after creation (accounts are only deactivated, never deleted).
