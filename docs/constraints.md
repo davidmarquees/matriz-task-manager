@@ -12,8 +12,8 @@
 
 | ID | Assumption |
 |---|---|
-| A1 | There are two roles: Manager and Member. |
-| A2 | Each user has their own account (email and password); only pre-created accounts exist. |
+| A1 | Roles are per project: Manager or Member. A project has one or more Managers (at least one at all times); its creator is the first. Managers can promote and demote members. Only Manager accounts can create projects. |
+| A2 | Each user has their own account (email and password). There is no self-service registration: a global Admin creates accounts when someone joins the company and assigns the Manager or Member account role. Pre-created accounts: Admin, Manager, Member. |
 | A3 | Each project has a list of members; there is no "Team" entity in the MVP. |
 | A4 | A user only sees the projects they are a member of. |
 | A5 | Mandatory task field: title; status and priority default to TODO and MEDIUM. |
@@ -21,13 +21,16 @@
 | A7 | Status transitions are free. |
 | A8 | A task can have several assignees, all members of the project. |
 | A9 | "Progress" = count of tasks per status. |
-| A10 | Only the Manager deletes projects; tasks are deleted by the Manager or by their creator. Deletion is permanent, with confirmation. |
+| A10 | Only the project's Managers delete the project; tasks are deleted by a project Manager or by their creator. Deletion is permanent, with confirmation. |
 | A11 | Deleting a project deletes its tasks and comments. |
 | A12 | The creator of a project automatically becomes a member. |
 | A13 | A Member can edit tasks they did not create. |
 | A14 | Comments cannot be edited or deleted in the MVP. |
-| A15 | Up to 50 users; no delivery date defined. |
+| A15 | At least 50 users and 1,000 tasks must be supported with good performance; no delivery date defined. |
 | A16 | Internal use, within a single company. |
+| A17 | After 5 consecutive failed login attempts, the account is blocked for 15 minutes. |
+| A18 | A session expires after 30 minutes of inactivity. |
+| A19 | The due date is optional and any date is accepted (past dates included). |
 
 ## 3. Security and privacy
 
@@ -48,9 +51,15 @@
 - Hosting and runtime environment.
 - Testing strategy.
 
-## 5. Scope limitations
+## 5. Pending product decisions
+
+- How the passwords of the pre-created accounts (Admin, Manager, Member) are shared without storing them in the repository (e.g. documented outside the repo, or a `.env.example` with placeholder values only). To decide in Worksheet 03.
+- How a user's personal data is deleted on request (GDPR right to erasure).
+
+## 6. Scope limitations
 
 - No kanban, notifications, attachments, subtasks, history, project archiving or due-date alerts.
-- No self-service registration or account management in the application.
+- Comments cannot be edited or deleted.
+- No self-service registration; the Admin only creates accounts (no editing or deactivation in the MVP).
 - No Team entity; work is organised by project membership.
 - Tasks are shown in a list view only.

@@ -17,31 +17,35 @@ Goals:
 
 | Role | Description |
 |---|---|
-| Manager | Creates projects, manages each project's members and has every permission on their projects. |
+| Admin | Global role. Creates a user account when someone joins the company and assigns it the Manager or Member account role. Does not manage project content. |
+| Manager | Account allowed to create projects. Becomes a Manager of each project they create and has every permission on it. |
 | Member | Sees the projects they are a member of, creates and edits tasks (including ones they did not create) and comments. |
 
-There is no self-service registration in the MVP: only pre-created accounts exist, including two demo accounts (one Manager and one Member).
+Roles apply per project: a project has one or more Managers and always at least one. The creator is its first Manager; a Manager can promote a Member to Manager or demote a Manager to Member. Every other user added to the project is a Member.
+
+There is no self-service registration: accounts are created by the Admin. Three accounts are pre-created: Admin, Manager and Member; the Manager and Member accounts are the two demo accounts.
 
 ## 3. Functional requirements
 
 | ID | Requirement | Source | Priority |
 |---|---|---|---|
 | FR1 | Users log in with email and password and can log out. | [A] | High |
-| FR2 | The Manager creates, edits and deletes projects (name mandatory, description optional). | G1 | High |
-| FR3 | The Manager adds and removes members of a project. | G1 | High |
+| FR1a | The Admin creates user accounts (name, email, initial password) and assigns each the Manager or Member account role. | [A] | High |
+| FR2 | A Manager account creates projects; the project's Managers edit and delete it (name mandatory, description optional). | G1 | High |
+| FR3 | The project's Managers add and remove members, and promote or demote them between Member and Manager; a project always keeps at least one Manager. | G1 | High |
 | FR4 | A user only sees the projects they are a member of. | [A] | High |
-| FR5 | Project members create, edit and delete tasks. Fields: title (mandatory), description, status, priority, due date, assignees. | G2 | High |
+| FR5 | Project members create and edit tasks, and delete them according to the permission rules below. Fields: title (mandatory, max. 200 characters, see A6), description, status, priority, due date (optional, any date accepted), assignees. | G2 | High |
 | FR6 | Task status: TODO, IN_PROGRESS or DONE; free transitions. | [A] | High |
 | FR7 | Task priority: LOW, MEDIUM or HIGH. | [A] | High |
 | FR8 | A task can have several assignees, all members of the project. | [A] | High |
 | FR9 | Per-project dashboard with the number of tasks in each status. | G3 | High |
 | FR10 | Task text search (title and description) and filters by status, priority and assignee. | [A] | Medium |
 | FR11 | Project members comment on tasks (plain text). | [A] | Medium |
-| FR12 | There are two demo accounts: one Manager and one Member. | [A] | Medium |
+| FR12 | Three pre-created accounts exist: Admin, Manager and Member; the Manager and Member accounts are the demo accounts for testing permissions. | [A] | Medium |
 
 ### Permission rules [A]
 
-| Action | Manager | Member |
+| Action | Project Manager | Member |
 |---|---|---|
 | Create / edit / delete project | Yes | No |
 | Manage project members | Yes | No |
@@ -54,7 +58,7 @@ There is no self-service registration in the MVP: only pre-created accounts exis
 | ID | Requirement |
 |---|---|
 | NFR1 | User interface in European Portuguese. |
-| NFR2 | Sized for up to 50 users. |
+| NFR2 | Must perform well with at least 50 users and 1,000 tasks; above that, performance is not guaranteed (nothing is blocked). |
 | NFR3 | Passwords are never stored in plain text. |
 | NFR4 | All permissions are enforced on the server, not only in the interface. |
 | NFR5 | Clear error messages that do not expose internal details. |
@@ -66,4 +70,4 @@ FR1 to FR12, with tasks shown in a list view.
 
 ## 6. Out of initial scope
 
-Kanban board, Team entity, notifications, attachments, subtasks, history and audit, project archiving, due-date alerts, self-service user registration, editing and deleting comments.
+Kanban board, Team entity, notifications, attachments, subtasks, history and audit, project archiving, due-date alerts, self-service user registration, editing and deleting comments, editing or deactivating accounts after creation.
