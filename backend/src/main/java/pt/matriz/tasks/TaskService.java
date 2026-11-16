@@ -251,6 +251,60 @@ public class TaskService {
                 ActivityLog.Action.DELETED, Map.of("title", ActivityLog.change(locked.title(), null)));
     }
 
+    // ------------------------------------------------------------------ assignees
+
+    /**
+     * Assigns a user (any member of the project). The user must be an active member (FR8, D22 → 422);
+     * already assigned → 409 (D21, guaranteed by the primary key also for simultaneous requests).
+     * Does not need or change the task's version (openapi.yaml, assumption).
+     */
+    @Transactional
+    public Task addAssignee(AuthenticatedUser user, long taskId, Long assigneeId) {
+        Row task = findRow(taskId, false);
+        ProjectRole role = requireProjectMember(user, task.projectId());
+        if (assigneeId == null) {
+            throw ApiException.invalid("userId", "REQUIRED");
+        }
+        ProjectAccess.LockedProject project = access.lock(task.projectId());
+        findRow(taskId, true); // D26: deleted meanwhile → 404
+        try {
+            checkAssignees(task.projectId(), List.of(assigneeId));
+        } catch (ApiException e) {
+            throw ApiException.invalid("userId", "NOT_A_PROJECT_MEMBER");
+        }
+        try {
+            jdbc.update("INSERT INTO task_assignees (task_id, project_id, user_id) VALUES (?, ?, ?)",
+                    taskId, task.projectId(), assigneeId);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            throw ApiException.conflict("ALREADY_ASSIGNED");
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw ApiException.invalid("userId", "NOT_A_PROJECT_MEMBER"); // member removed at the same moment
+        }
+        recordAssignees(task.projectId(), project.name(), user.id(), taskId, List.of(assigneeId), ActivityLog.Action.ADDED);
+        return toTasks(List.of(findRow(taskId, false)), role).get(0);
+    }
+
+    /** Removes one assignment (any member of the project); 404 when the user is not assigned. */
+    @Transactional
+    public void removeAssignee(AuthenticatedUser user, long taskId, long assigneeId) {
+        Row task = findRow(taskId, false);
+        requireProjectMember(user, task.projectId());
+        ProjectAccess.LockedProject project = access.lock(task.projectId());
+        int removed = jdbc.update("DELETE FROM task_assignees WHERE task_id = ? AND user_id = ?", taskId, assigneeId);
+        if (removed == 0) {
+            throw ApiException.notFound();
+        }
+        recordAssignees(task.projectId(), project.name(), user.id(), taskId, List.of(assigneeId), ActivityLog.Action.REMOVED);
+    }
+
+    /** Project of a task the user may access (members only; Admin 403, others 404). Used by the comments module. */
+    @Transactional(readOnly = true)
+    public long requireTaskAccess(AuthenticatedUser user, long taskId) {
+        Row task = findRow(taskId, false);
+        requireProjectMember(user, task.projectId());
+        return task.projectId();
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /** Members only; the Admin account gets 403 on an existing project (D11), everyone else 404 (E4). */
@@ -347,16 +401,29 @@ public class TaskService {
         return result;
     }
 
-    /** Latest UPDATED entry of each task in the activity log (extra feature "last change"). */
+    /**
+     * Latest change of each task in the activity log (extra feature "last change", FR14): task updates
+     * and assignee changes. When both were written by the same update, the task entry wins (it lists
+     * every changed field).
+     */
     private Map<Long, LastChangeRow> lastChangesOf(long projectId, Collection<Long> taskIds) {
         Map<Long, LastChangeRow> result = new HashMap<>();
-        named.query("SELECT DISTINCT ON (entity_id) entity_id, actor_id, changes::text AS changes, created_at "
-                        + "FROM activity_log WHERE project_id = :projectId AND entity_type = 'TASK' AND action = 'UPDATED' "
-                        + "AND entity_id IN (:ids) ORDER BY entity_id, created_at DESC, id DESC",
+        named.query("SELECT DISTINCT ON (task_id) task_id, actor_id, changes, created_at, entity_type FROM ("
+                        + " SELECT entity_id AS task_id, actor_id, changes::text AS changes, created_at, id, entity_type"
+                        + " FROM activity_log WHERE project_id = :projectId AND entity_type = 'TASK' AND action = 'UPDATED'"
+                        + " AND entity_id IN (:ids)"
+                        + " UNION ALL"
+                        + " SELECT (changes ->> 'taskId')::bigint, actor_id, changes::text, created_at, id, entity_type"
+                        + " FROM activity_log WHERE project_id = :projectId AND entity_type = 'ASSIGNEE'"
+                        + " AND (changes ->> 'taskId')::bigint IN (:ids)"
+                        + ") x ORDER BY task_id, created_at DESC, (entity_type = 'TASK') DESC, id DESC",
                 new MapSqlParameterSource("projectId", projectId).addValue("ids", taskIds),
                 rs -> {
-                    result.put(rs.getLong("entity_id"), new LastChangeRow(rs.getLong("actor_id"),
-                            rs.getObject("created_at", OffsetDateTime.class), fields(rs.getString("changes"))));
+                    boolean assigneeEntry = "ASSIGNEE".equals(rs.getString("entity_type"));
+                    result.put(rs.getLong("task_id"), new LastChangeRow(rs.getLong("actor_id"),
+                            rs.getObject("created_at", OffsetDateTime.class),
+                            assigneeEntry ? List.of(new FieldChange("assignees", null, null))
+                                    : fields(rs.getString("changes"))));
                 });
         return result;
     }

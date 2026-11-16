@@ -261,3 +261,17 @@ select {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.comments {
+  list-style: none;
+  padding: 0;
+}
+
+.comments li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.comments p {
+  margin: 0.2rem 0;
+}

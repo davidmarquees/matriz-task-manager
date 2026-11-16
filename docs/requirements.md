@@ -47,6 +47,7 @@ There is no self-service registration: accounts are created by the Admin. Three 
 | FR11 | Project members comment on tasks (plain text). | [A] | Medium |
 | FR12 | Three pre-created accounts exist: Admin, Manager and Member; the Manager and Member accounts are the demo accounts for testing permissions. | [A] | Medium |
 | FR13 | Every change inside a project (project data, members, tasks, assignees, comments) is recorded in an activity log: who, what, when, values before and after. The project's Managers can read it; nobody can change or delete it. | [A] | High |
+| FR14 | Each task shows when it was last changed ("Alterada hoje", "ontem" or the date; "Criada …" if never changed), taken from the activity log. The project's Managers also see who made that change and which fields changed (old and new values, except description and assignees). Shown on hover, keyboard focus and tap. Extra feature added in Worksheet 03 at the developer's request (2026-11-16, option A: A23 unchanged). | Developer | Low |
 
 ### Permission rules [A]
 
@@ -79,7 +80,7 @@ There is no self-service registration: accounts are created by the Admin. Three 
 
 ## 5. MVP scope
 
-FR1 to FR13, with tasks shown in a list view.
+FR1 to FR13, with tasks shown in a list view. FR14 is an extra added during Worksheet 03 (docs/implementation-plan.md, increment 4).
 
 ## 6. Out of initial scope
 

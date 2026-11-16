@@ -13,6 +13,8 @@ import {
   type TaskStatus,
 } from '../api/tasks';
 import { useAuth } from '../auth/AuthContext';
+import { AssigneesSection } from '../components/AssigneesSection';
+import { CommentsSection } from '../components/CommentsSection';
 import { LastChangeNote } from '../components/LastChangeNote';
 import { taskErrorMessage } from '../components/TasksSection';
 import { formatDate, taskPriorityLabel, taskStatusLabel, userLabel } from '../labels';
@@ -23,7 +25,7 @@ type Load =
   | { status: 'error' }
   | { status: 'ready'; task: Task; project: Project };
 
-/** Task detail (Worksheet 03, Ex. 5): data, edit, status, priority and delete. Assignees and comments: Ex. 6. */
+/** Task detail (Worksheet 03, Ex. 5 and 6): data, edit, status, priority, delete, assignees and comments. */
 export function TaskDetailPage() {
   const id = Number(useParams().taskId);
   const navigate = useNavigate();
@@ -113,8 +115,6 @@ export function TaskDetailPage() {
             <dd data-testid="task-priority">{taskPriorityLabel[task.priority]}</dd>
             <dt>Data limite</dt>
             <dd data-testid="task-due-date">{task.dueDate ? formatDate(task.dueDate) : '—'}</dd>
-            <dt>Responsáveis</dt>
-            <dd data-testid="task-assignees">{task.assignees.length ? task.assignees.map(userLabel).join(', ') : '—'}</dd>
             <dt>Criada por</dt>
             <dd>
               {userLabel(task.createdBy)} · {formatDate(task.createdAt)}
@@ -134,6 +134,8 @@ export function TaskDetailPage() {
               </button>
             )}
           </div>
+          <AssigneesSection task={task} onChanged={reload} />
+          <CommentsSection taskId={task.id} />
         </>
       )}
     </main>

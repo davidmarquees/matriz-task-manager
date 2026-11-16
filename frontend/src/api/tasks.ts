@@ -83,3 +83,30 @@ export function updateTask(id: number, version: number, changes: Partial<NewTask
 export function deleteTask(id: number): Promise<void> {
   return api<void>(`/tasks/${id}`, { method: 'DELETE' });
 }
+
+export function addAssignee(taskId: number, userId: number): Promise<Task> {
+  return api<Task>(`/tasks/${taskId}/assignees`, { method: 'POST', body: { userId } });
+}
+
+export function removeAssignee(taskId: number, userId: number): Promise<void> {
+  return api<void>(`/tasks/${taskId}/assignees/${userId}`, { method: 'DELETE' });
+}
+
+export const COMMENT_MAX = 2000;
+
+/** Comment schema of openapi.yaml; author and date come from the server. */
+export interface Comment {
+  id: number;
+  taskId: number;
+  author: UserSummary;
+  body: string;
+  createdAt: string;
+}
+
+export function listComments(taskId: number): Promise<Comment[]> {
+  return api<Comment[]>(`/tasks/${taskId}/comments`);
+}
+
+export function addComment(taskId: number, body: string): Promise<Comment> {
+  return api<Comment>(`/tasks/${taskId}/comments`, { method: 'POST', body: { body } });
+}

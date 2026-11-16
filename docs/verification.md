@@ -70,3 +70,19 @@ Not checked in this increment: two Managers demoting each other at the same inst
 
 Not checked in this increment: the delete button hidden for a Member on someone else's task (checked only in the API, 403); the note on a touch screen; the layout at 360 px (Ex. 7).
 
+## Increment 5 — Assignees and comments (Ex. 6), 2026-11-16
+
+Browser checks ran on ports 8081 (backend) and 5174 (frontend), so the developer's servers on 8080 and 5173 were not touched. The development database was stopped and was started again with `docker compose up -d`.
+
+| # | Scenario | Type | Expected | Observed | Evidence |
+|---|---|---|---|---|---|
+| V-27 | Backend build and tests | Auto | All tests pass | 60 tests, 0 failures, `BUILD SUCCESS` | `cd backend && ./mvnw verify` (new: `AssigneesAndCommentsApiTest` 6) |
+| V-28 | Several assignees, no duplicates (US4, D21, D22) | Auto + Manual | Several eligible users per task; the same user twice → 409 `ALREADY_ASSIGNED`; a non-member or unknown user → 422 `NOT_A_PROJECT_MEMBER`; each assignment removable; removing one that does not exist → 404; still there when the task is reopened | As expected. Browser (demo Member): assigned "Gestor Demo" → "Responsáveis (2)", the picker then said "Todos os membros do projeto já estão atribuídos."; after reloading, both still listed; removing "Gestor Demo" → "Responsáveis (1)" | `AssigneesAndCommentsApiTest` (2 tests); browser |
+| V-29 | Comments with author and date (US7, FR11, A14) | Auto + Manual | Author and date set by the server (an `authorId` in the body → 400); oldest first; text trimmed; empty, only spaces or null → 422; over 2,000 → `TOO_LONG`; the text is not copied to the activity log; still there after reloading | As expected. Browser: only spaces → "O comentário não pode estar vazio nem ter só espaços."; "Proponho tons de azul e cinzento." shown as "Membro Demo · 16/11/2026 15:58" and still there after reloading | `AssigneesAndCommentsApiTest` (2 tests); browser |
+| V-30 | Access (E4, D11, D17) | Auto + Manual | Outsider → 404 on assignees and comments; Admin → 403; Member does not see "Eliminar tarefa" on a task created by the Manager | As expected | `AssigneesAndCommentsApiTest`; browser (closes the gap left in V-26) |
+| V-31 | FR14 counts assignee changes | Auto + Manual | After an assignment the task shows "Alterada hoje"; Managers see "Responsáveis alterados" by the member; a comment does not change it | As expected; browser showed "Alterada hoje" after the assignment | `AssigneesAndCommentsApiTest.assigneeChangesCountAsTheLastChange`; browser |
+
+Test data left in the development database: one comment on the demo task "Define the new colour palette" (comments cannot be deleted, A14). The assignment made for the test was removed.
+
+Not checked in this increment: two users assigning the same person at the same instant (guaranteed by the primary key, no concurrent test); the layout at 360 px (Ex. 7).
+

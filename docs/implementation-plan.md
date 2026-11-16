@@ -131,7 +131,7 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 | 2 | Ex. 3 | Authentication and access rules | Done (2026-11-16) | [verification.md](verification.md) V-07 to V-14; `./mvnw verify` 34 tests passed; commit pending |
 | 3 | Ex. 4 | Projects and members | Done (2026-11-16) | [verification.md](verification.md) V-15 to V-20; `./mvnw verify` 45 tests passed; commit pending |
 | 4 | Ex. 5 | Tasks, filters, dashboard counts (+ extra "last change") | Done (2026-11-16) | [verification.md](verification.md) V-21 to V-26; `./mvnw verify` 54 tests passed; commit pending |
-| 5 | Ex. 6 | Assignees and comments | Not started | — |
+| 5 | Ex. 6 | Assignees and comments | Done (2026-11-16) | [verification.md](verification.md) V-27 to V-31; `./mvnw verify` 60 tests passed; commit pending |
 | 6 | Ex. 7 | Complete frontend | Not started | — |
 | 7 | Ex. 8 | Verification, tests, bug fixes | Not started | — |
 | 8 | optional | Documented features outside the Worksheet (P9) | Not started | — |
@@ -191,6 +191,10 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 - **Components:** assignee add/remove, eligible users from members; comments module; frontend assignee selector and comment list on the task detail.
 - **Acceptance:** US4, US7; D21, D22; author and date set by the backend; data still there after reopening the task.
 - **Checks:** integration tests: duplicate assignee 409, non-member 422, comment only spaces 422, non-member comment 404.
+- **As implemented (2026-11-16, approved by David):**
+  - Backend: `addAssignee` and `removeAssignee` in `TaskService` (any member; active project members only, 422 `NOT_A_PROJECT_MEMBER`; already assigned 409 `ALREADY_ASSIGNED`, also under concurrency through the primary key; not assigned 404; the task version is not changed); `comments` module (`CommentService`, `CommentController`: list oldest first, add with author and date from the server, 1 to 2,000 characters, no edit or delete); activity entries `ASSIGNEE ADDED/REMOVED` (with `taskId`) and `COMMENT CREATED` (without the text).
+  - FR14 "last change" now also counts assignee changes ("Responsáveis alterados"); comments do not count. FR14 and US15 added to requirements.md and user-stories.md at David's request.
+  - Frontend: task page with assignees (list, remove, picker of eligible members not yet assigned) and comments (list with author, date and time; form with a character counter, text kept on error).
 
 ### Increment 6 — Complete frontend (Ex. 7)
 - **Components:** dashboard as in the wireframe, all screens of Ex. 7, shared form and message components, loading/empty/success/error states, no double submit, form data kept on error, responsive layout (360 px), light/dark/system theme, PT/EN, `data-testid`.

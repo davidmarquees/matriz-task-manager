@@ -61,6 +61,23 @@ class TaskController {
         return tasks.update(user, taskId, PatchBody.of(body, TaskService.PATCH_FIELDS));
     }
 
+    record AssigneeAddRequest(Long userId) {
+    }
+
+    @PostMapping("/tasks/{taskId}/assignees")
+    ResponseEntity<Task> addAssignee(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable long taskId,
+                                     @RequestBody AssigneeAddRequest body) {
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(tasks.addAssignee(user, taskId, body.userId()));
+    }
+
+    @DeleteMapping("/tasks/{taskId}/assignees/{userId}")
+    ResponseEntity<Void> removeAssignee(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable long taskId,
+                                        @PathVariable long userId) {
+        tasks.removeAssignee(user, taskId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/tasks/{taskId}")
     ResponseEntity<Void> delete(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable long taskId) {
         tasks.delete(user, taskId);

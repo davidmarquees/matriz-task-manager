@@ -140,4 +140,4 @@ npm run build
 
 ## Current status
 
-Implementation (Worksheet 03). Done: increment 1 (project skeleton, database schema and demo data) increment 2 (authentication and access rules), increment 3 (projects and members) and increment 4 (tasks, with the "last change" note). See [docs/implementation-plan.md](docs/implementation-plan.md).
+Implementation (Worksheet 03). Done: increment 1 (project skeleton, database schema and demo data) increment 2 (authentication and access rules), increment 3 (projects and members) and increment 4 (tasks, with the "last change" note) and increment 5 (assignees and comments). See [docs/implementation-plan.md](docs/implementation-plan.md).

@@ -21,6 +21,7 @@
 | US12 | As an Admin or a project Manager, I want to see who changed what and when, so that every change can be traced. | FR1d, FR13 | High |
 | US13 | As a user, I want to choose the language (Português or English) and the theme (light, dark or automatic), so that the interface suits me. | NFR1, NFR8 | Medium |
 | US14 | As a user, I want to use Matriz in a mobile browser, so that I can follow the work away from my desk. | NFR7 | Medium |
+| US15 | As a project member, I want to see when a task was last changed, and as a Manager also who changed it and what, so that I can follow recent work without opening the activity log. | FR14 (extra) | Low |
 
 ## 2. Acceptance criteria
 
@@ -90,6 +91,12 @@
 
 ### US14 — Mobile
 - **Given** a browser 360 px wide, **When** I open the dashboard, **Then** every element is usable without horizontal scrolling.
+
+### US15 — Last change of a task (extra)
+- **Given** a Member changed a task's status today, **When** any member of the project sees the task, **Then** it shows "Alterada hoje".
+- **Given** the same change, **When** a project Manager hovers, focuses or taps the note, **Then** it shows who made the change and "Estado: A fazer → Em curso".
+- **Given** the same change, **When** a Member hovers the note, **Then** no name or values are shown (A23).
+- **Given** a task that was never changed, **When** I see it, **Then** it shows "Criada" with its creation date.
 
 ## 3. Exceptional and edge cases
 
