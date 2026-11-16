@@ -1,9 +1,10 @@
 import { ArrowUpRight, Clock } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { AuthHero } from '../components/AuthHero';
 import { PreferenceSwitches } from '../components/PreferenceSwitches';
 import { Alert } from '../ui/Bits';
 
@@ -53,30 +54,7 @@ export function LoginPage() {
   return (
     <main className="auth">
       <div className="auth-board">
-        <section className="auth-hero" aria-hidden="false">
-          <div className="brand" style={{ color: 'inherit' }}>
-            <span className="brand-mark" aria-hidden="true">
-              M
-            </span>
-            <span className="brand-name">{t('app.name')}</span>
-          </div>
-          <div className="stack" style={{ gap: 18 }}>
-            <h1>
-              {t('login.heroLine1')}
-              <br />
-              {t('login.heroLine2')}
-              <br />
-              <span className="accent">{t('login.heroLine3')}</span>
-            </h1>
-            <p style={{ maxWidth: 420, color: 'var(--on-dark-2)' }}>{t('app.tagline')}</p>
-          </div>
-          <div className="auth-bars" aria-hidden="true">
-            <span style={{ height: '45%', border: '1.5px solid var(--on-dark)', backgroundImage: 'repeating-linear-gradient(135deg, var(--on-dark) 0 1.5px, transparent 1.5px 7px)' }} />
-            <span style={{ height: '70%', background: '#e3b867' }} />
-            <span style={{ height: '100%', background: '#7db39a' }} />
-            <span style={{ height: '60%', background: '#d2694f' }} />
-          </div>
-        </section>
+        <AuthHero />
 
         <section className="auth-panel">
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -135,6 +113,9 @@ export function LoginPage() {
               </span>
             </button>
           </form>
+          <Link to="/forgot-password" className="link-button" style={{ alignSelf: 'flex-start' }} data-testid="forgot-password-link">
+            {t('reset.forgotLink')}
+          </Link>
           <span className="eyebrow" style={{ fontSize: 11 }}>
             {t('login.footnote')}
           </span>

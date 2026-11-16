@@ -45,6 +45,8 @@ export interface TaskFilters {
   q: string;
   status: TaskStatus | '';
   priority: TaskPriority | '';
+  /** user id of an assignee, or '' for every task (US6) */
+  assigneeId: string;
 }
 
 export const TASK_TITLE_MIN = 3;
@@ -57,6 +59,7 @@ export function listTasks(projectId: number, filters: TaskFilters, page: number)
   if (filters.q.trim()) params.set('q', filters.q.trim());
   if (filters.status) params.set('status', filters.status);
   if (filters.priority) params.set('priority', filters.priority);
+  if (filters.assigneeId) params.set('assigneeId', filters.assigneeId);
   return api<TaskPage>(`/projects/${projectId}/tasks?${params.toString()}`);
 }
 

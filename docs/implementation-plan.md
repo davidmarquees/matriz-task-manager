@@ -83,7 +83,7 @@ All operations below, except the optional group, are added to `openapi.yaml` in 
 | Dashboard | `getDashboard` (per project: counts per status; totals) | 4 |
 | Assignees | `addAssignee`, `removeAssignee` | 5 |
 | Comments | `listComments`, `addComment` | 5 |
-| Optional (P9) | change own password, preferences, accounts (create, deactivate, reactivate, anonymise, set password, appoint Manager), user audit log, project activity log, password reset request and confirm | 8 (contract added then, only if approved) |
+| Optional (P9) | change own password, preferences, accounts (create, deactivate, reactivate, anonymise, set password, appoint Manager), user audit log, project activity log, password reset request and confirm | 2, 6 and 8 (contract 0.4.0 to 0.7.0) |
 
 ## 6a. Data model changes
 
@@ -133,8 +133,8 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 | 4 | Ex. 5 | Tasks, filters, dashboard counts (+ extra "last change") | Done (2026-11-16) | [verification.md](verification.md) V-21 to V-26; `./mvnw verify` 54 tests passed; commit pending |
 | 5 | Ex. 6 | Assignees and comments | Done (2026-11-16) | [verification.md](verification.md) V-27 to V-31; `./mvnw verify` 60 tests passed; commit pending |
 | 6 | Ex. 7 | Complete frontend | Done (2026-11-16) | [verification.md](verification.md) V-32 to V-38; `./mvnw verify` 61 tests, `npm test` 11 tests passed; commit pending |
-| 7 | Ex. 8 | Verification, tests, bug fixes | Not started | — |
-| 8 | optional | Documented features outside the Worksheet (P9) | Not started | — |
+| 7 | Ex. 8 | Verification, tests, bug fixes | Done (2026-11-16) | [verification.md](verification.md) scenarios 01–09 and V-40 to V-46; `./mvnw verify` 81 tests, `npm test` 19 tests, `npm run e2e` 5 passed; one bug (redirect after logout) fixed with a regression test; commit pending |
+| 8 | optional | Documented features outside the Worksheet (P9) | Done (2026-11-16) | Project activity log, account administration, appoint Manager, user audit log, password reset by email (Mailpit); contract 0.7.0; [verification.md](verification.md) V-43 to V-45; commit pending |
 | 9 | Ex. 9 | Review, documentation, delivery | Not started | — |
 
 ### Increment 0 — Plan and contract (Ex. 1)
@@ -212,6 +212,12 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 
 ### Increment 8 — Optional (P9)
 - Only if approved: forced password change and own password change; Admin account area; user audit log and project activity log reading; saved language and theme; password reset with a local test mail server.
+- **As implemented (2026-11-16, approved by David with the Ex. 8 plan):**
+  - Contract 0.6.0: `GET /projects/{id}/activity` (project Managers). Contract 0.7.0: `/admin/users` (list, create), `/admin/users/{id}/deactivate|reactivate|anonymise`, `/admin/audit`, `POST /projects/{id}/managers`, `/auth/password-reset` and `/auth/password-reset/confirm`; new conflict codes `EMAIL_IN_USE`, `NOT_ACTIVE`, `LAST_ADMIN`, `ONLY_MANAGER`, `ALREADY_ACTIVE`, `ANONYMISED`, `NOT_DEACTIVATED` and validation code `INVALID_TOKEN`.
+  - Backend: `AdminService`, `AdminController`, `AuditQuery`, `ActivityQuery`, `PasswordResetService` (token hash only, 30 min, single use, 3 per hour, sessions ended on success), `EmailSender` interface with an SMTP adapter; `spring-boot-starter-mail`; mail health check off so a stopped mail server does not mark the app as down.
+  - Development mail: Mailpit in `docker-compose.yml` (SMTP 1025, UI 8025); new variables in `.env.example`.
+  - Frontend: "Contas" page for the Admin (list with search and status filter, create, deactivate, reactivate with a new initial password, anonymise, audit log), appoint-Manager form on the project page for the Admin, "Esqueceu-se da palavra-passe?" and reset pages, project history for Managers.
+  - Tests: Playwright 1.64.1 and `@axe-core/playwright` 4.14.0 (main flow, D9 access, accessibility in both themes, Admin flow when a test Admin password is given).
 
 ### Increment 9 — Review and delivery (Ex. 9)
 - Diff review, one separate refactoring if useful, `openapi.yaml` and docs matching the code, AGENTS.md commands, README from a clean clone, AI usage examples, proposed steps to merge `feat/mvp` into `main` and tag the delivered version.

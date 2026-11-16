@@ -127,6 +127,67 @@ public class MemberService {
         recordRemoved(projectId, project.name(), user.id(), memberId, current);
     }
 
+    /**
+     * Appoint a Manager (FR3, D12): the Admin account or a project Manager. The user must be an active,
+     * non-Admin account (D14); added to the project if needed, otherwise promoted.
+     */
+    @Transactional
+    public Member appointManager(AuthenticatedUser user, long projectId, String email) {
+        if (ProjectAccess.isAdmin(user)) {
+            access.requireReader(projectId, user); // 404 when the project does not exist
+        } else {
+            access.requireManager(projectId, user.id());
+        }
+        if (email == null || email.isBlank()) {
+            throw ApiException.invalid("email", email == null ? "REQUIRED" : "BLANK");
+        }
+        AccountView account = accounts.findByEmail(email)
+                .filter(a -> a.active() && a.accountRole() != User.AccountRole.ADMIN)
+                .orElseThrow(() -> ApiException.invalid("email", "USER_NOT_ELIGIBLE"));
+        ProjectAccess.LockedProject project = access.lock(projectId);
+        List<String> roles = jdbc.queryForList(
+                "SELECT project_role FROM project_members WHERE project_id = ? AND user_id = ?", String.class,
+                projectId, account.id());
+        if (roles.isEmpty()) {
+            jdbc.update("INSERT INTO project_members (project_id, user_id, project_role) VALUES (?, ?, 'MANAGER')",
+                    projectId, account.id());
+            activity.record(projectId, project.name(), user.id(), ActivityLog.EntityType.MEMBER, account.id(),
+                    ActivityLog.Action.ADDED, Map.of("projectRole", ActivityLog.change(null, "MANAGER")));
+        } else if (!roles.get(0).equals("MANAGER")) {
+            jdbc.update("UPDATE project_members SET project_role = 'MANAGER' WHERE project_id = ? AND user_id = ?",
+                    projectId, account.id());
+            activity.record(projectId, project.name(), user.id(), ActivityLog.EntityType.MEMBER, account.id(),
+                    ActivityLog.Action.UPDATED, Map.of("projectRole", ActivityLog.change(roles.get(0), "MANAGER")));
+        }
+        audit.record(user.id(), account.id(), "MANAGER_APPOINTED", projectId, project.name(),
+                roles.isEmpty() ? null : Map.of("projectRole", roles.get(0)), Map.of("projectRole", "MANAGER"));
+        return member(projectId, account.id());
+    }
+
+    /** Projects where this user is the only Manager (D5: deactivation refused until another is appointed). */
+    @Transactional(readOnly = true)
+    public List<Long> projectsWhereOnlyManager(long userId) {
+        return jdbc.queryForList("SELECT m.project_id FROM project_members m "
+                + "WHERE m.user_id = ? AND m.project_role = 'MANAGER' "
+                + "AND (SELECT count(*) FROM project_members x WHERE x.project_id = m.project_id "
+                + "AND x.project_role = 'MANAGER') = 1", Long.class, userId);
+    }
+
+    /** Deactivation (FR1b): removes every membership, one log entry per membership (E1: assignments go too). */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void removeAllMemberships(long userId, long actorId) {
+        List<Map<String, Object>> rows = jdbc.queryForList("SELECT m.project_id, m.project_role, p.name "
+                + "FROM project_members m JOIN projects p ON p.id = m.project_id "
+                + "WHERE m.user_id = ? ORDER BY m.project_id FOR UPDATE OF p", userId);
+        for (Map<String, Object> row : rows) {
+            long projectId = ((Number) row.get("project_id")).longValue();
+            String projectName = (String) row.get("name");
+            String role = (String) row.get("project_role");
+            jdbc.update("DELETE FROM project_members WHERE project_id = ? AND user_id = ?", projectId, userId);
+            recordRemoved(projectId, projectName, actorId, userId, ProjectRole.valueOf(role));
+        }
+    }
+
     /** The creator of a new project becomes its first Manager (A12). */
     @Transactional(propagation = Propagation.MANDATORY)
     void addCreator(long projectId, String projectName, long creatorId) {

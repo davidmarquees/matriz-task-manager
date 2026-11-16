@@ -86,7 +86,9 @@ Change the passwords in `.env`. `.env.example` has fictitious values only; never
 docker compose up -d
 ```
 
-Starts PostgreSQL 16 with a persistent volume. On the first start it also creates the application user (`docker/postgres/init`). `docker compose down` keeps the data; `docker compose down -v` deletes it.
+Starts PostgreSQL 16 with a persistent volume and Mailpit, a local mail catcher. On the first start it also creates the application user (`docker/postgres/init`). `docker compose down` keeps the data; `docker compose down -v` deletes it.
+
+Every email the backend sends (only the password reset link) goes to Mailpit and never leaves the machine: read it at <http://localhost:8025>. The link in the email uses `MATRIZ_APP_URL`. If Mailpit is not running, asking for a reset still answers the same and the error is logged without the link.
 
 ### 3. Backend (schema and seed)
 
@@ -116,13 +118,23 @@ Authentication uses a server-side session (Spring Security), described in `opena
 3. Every later request sends the session cookie; POST, PATCH and DELETE also send `X-XSRF-TOKEN`. The account status is read from the database on every request; a deactivated account gets 401. While a password change is required, everything except `me`, `logout` and `password` gets 403.
 4. The session ends with `POST /api/auth/logout`, after 30 minutes of inactivity, or when the user changes the password in another session (`POST /api/auth/password` ends every other session). Sessions are kept in memory, so restarting the backend ends them all. The interface then shows the login page with "A sessão expirou".
 
+### Behind a reverse proxy (production)
+
+The login rate limit (20 attempts per IP address in 15 minutes) uses the client address the backend sees. In development that is fine. Behind a reverse proxy or load balancer every request would come from the proxy's address, so all users would share one limit. In that case:
+
+- configure the proxy to send `X-Forwarded-For` / `X-Forwarded-Proto` and to overwrite any value sent by the client;
+- start the backend with `SERVER_FORWARD_HEADERS_STRATEGY=native` (Spring Boot property `server.forward-headers-strategy`), so the client address comes from the trusted proxy header;
+- set `MATRIZ_COOKIE_SECURE=true` (the proxy serves HTTPS).
+
+Never trust forwarded headers when the backend is reachable without the proxy: a client could then choose its own address.
+
 ### Demo accounts (`dev` profile only, fictitious data)
 
 | Account | Email | Password | Access |
 |---|---|---|---|
 | Gestor Demo | `manager@example.test` | `MATRIZ_DEMO_PASSWORD` | Projects "Website redesign" (Manager) and "Annual report" (Manager) |
 | Membro Demo | `member@example.test` | `MATRIZ_DEMO_PASSWORD` | Project "Website redesign" (Member) only |
-| Admin | `MATRIZ_ADMIN_EMAIL` | `MATRIZ_ADMIN_PASSWORD` | Account administration; must change the password at first login |
+| Admin | `MATRIZ_ADMIN_EMAIL` | `MATRIZ_ADMIN_PASSWORD` | Account administration ("Contas" in the menu): create, deactivate, reactivate and anonymise accounts, appoint a project Manager, read the audit log; must change the password at first login |
 
 ### Tests
 
@@ -141,6 +153,18 @@ npm run build
 
 Frontend tests use Vitest and Testing Library in a simulated browser (jsdom); they mock the API, so they need no backend.
 
+#### End-to-end and accessibility tests (Playwright + axe)
+
+They drive the installed Google Chrome against a running app (backend and `npm run dev`), log in with the demo accounts, and run the axe-core audit (WCAG 2.1 A/AA rules) on the main pages in light and dark themes. Each test deletes the projects it creates. The Admin test also creates accounts, which cannot be deleted, so it runs only when `MATRIZ_E2E_ADMIN_PASSWORD` is set: use it with a database for tests only.
+
+```bash
+cd frontend
+set -a; source ../.env; set +a
+npm run e2e
+```
+
+`MATRIZ_E2E_URL` changes the address (default <http://localhost:5173>). Many runs in a row reach the login rate limit (20 per 15 minutes); for a local test backend start it with `MATRIZ_LOGIN_RATELIMIT_MAXATTEMPTS=1000`. The HTML report is in `frontend/playwright-report` (git-ignored).
+
 ## Current status
 
-Implementation (Worksheet 03). Done: increment 1 (project skeleton, database schema and demo data) increment 2 (authentication and access rules), increment 3 (projects and members) and increment 4 (tasks, with the "last change" note) increment 5 (assignees and comments) and increment 6 (complete interface: approved design, PT/EN, light/dark/auto themes, mobile). See [docs/implementation-plan.md](docs/implementation-plan.md).
+Implementation (Worksheet 03). Done: increment 1 (project skeleton, database schema and demo data) increment 2 (authentication and access rules), increment 3 (projects and members) and increment 4 (tasks, with the "last change" note) increment 5 (assignees and comments) and increment 6 (complete interface: approved design, PT/EN, light/dark/auto themes, mobile). Increment 7 (Ex. 8 verification, end-to-end and accessibility tests) and the approved optional features (project history, account administration, audit log, password reset by email) are done; next: Ex. 9 (review and delivery). See [docs/implementation-plan.md](docs/implementation-plan.md).

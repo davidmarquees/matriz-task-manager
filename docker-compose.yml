@@ -1,4 +1,4 @@
-# Local development database (docs/architecture.md: Docker Compose for PostgreSQL only).
+# Local development services: PostgreSQL and Mailpit (a local mail catcher for the password reset email).
 # Values come from the .env file at the repository root (copy .env.example).
 services:
   db:
@@ -19,6 +19,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  mail:
+    # Catches every email the backend sends; nothing leaves the machine. Web UI: http://localhost:8025
+    image: axllent/mailpit:v1.27
+    ports:
+      - "${MATRIZ_MAIL_PORT:-1025}:1025"
+      - "${MATRIZ_MAIL_UI_PORT:-8025}:8025"
 
 volumes:
   # Data survives "docker compose down"; only "docker compose down -v" deletes it.

@@ -1,5 +1,7 @@
 import { ClipboardList, Plus, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { listMembers, type Member } from '../api/projects';
+import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import type { TFunction } from 'i18next';
@@ -49,11 +51,28 @@ export function taskErrorMessage(t: TFunction, e: unknown): string | null {
  * status / priority changes. After every change the list and the project counts are refreshed without
  * reloading the page.
  */
-export function TasksSection({ projectId, onTasksChanged }: { projectId: number; onTasksChanged: () => void }) {
+export function TasksSection({
+  projectId,
+  onTasksChanged,
+  initialStatus = '',
+}: {
+  projectId: number;
+  onTasksChanged: () => void;
+  initialStatus?: TaskStatus | '';
+}) {
   const { t, i18n } = useTranslation();
   const { toast } = useFeedback();
+  const { state } = useAuth();
+  const me = state.status === 'authenticated' ? state.user : null;
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState<TaskFilters>({ q: '', status: '', priority: '' });
+  const [filters, setFilters] = useState<TaskFilters>({ q: '', status: initialStatus, priority: '', assigneeId: '' });
+  const [members, setMembers] = useState<Member[]>([]);
+
+  useEffect(() => {
+    listMembers(projectId)
+      .then(setMembers)
+      .catch(() => setMembers([]));
+  }, [projectId]);
   const [page, setPage] = useState(0);
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [rowError, setRowError] = useState<string | null>(null);
@@ -102,7 +121,7 @@ export function TasksSection({ projectId, onTasksChanged }: { projectId: number;
     }
   }
 
-  const filtered = filters.q.trim() !== '' || filters.status !== '' || filters.priority !== '';
+  const filtered = filters.q.trim() !== '' || filters.status !== '' || filters.priority !== '' || filters.assigneeId !== '';
   const totalPages = load.status === 'ready' ? Math.max(1, Math.ceil(load.data.totalItems / TASK_PAGE_SIZE)) : 1;
 
   return (
@@ -179,6 +198,29 @@ export function TasksSection({ projectId, onTasksChanged }: { projectId: number;
                 {t(`priority.${p}`)}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="field">
+          {t('tasks.assignee')}
+          <select
+            value={filters.assigneeId}
+            onChange={(e) => {
+              setFilters({ ...filters, assigneeId: e.target.value });
+              setPage(0);
+            }}
+            data-testid="task-filter-assignee"
+          >
+            <option value="">{t('tasks.allAssignees')}</option>
+            {me && members.some((m) => m.user.id === me.id) && (
+              <option value={String(me.id)}>{t('tasks.me', { name: me.name })}</option>
+            )}
+            {members
+              .filter((m) => m.user.id !== me?.id)
+              .map((m) => (
+                <option key={m.user.id} value={String(m.user.id)}>
+                  {userLabel(t, m.user)}
+                </option>
+              ))}
           </select>
         </label>
       </div>

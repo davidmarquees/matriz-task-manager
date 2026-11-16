@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],
       css: false,
+      include: ['src/**/*.test.{ts,tsx}'], // e2e/ is for Playwright
     },
     server: {
       port: 5173,

@@ -95,6 +95,15 @@ class ProjectController {
         return members.add(user, projectId, body.email(), body.projectRole());
     }
 
+    record AppointRequest(String email) {
+    }
+
+    @PostMapping("/{projectId}/managers")
+    Member appointManager(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable long projectId,
+                          @RequestBody AppointRequest body) {
+        return members.appointManager(user, projectId, body.email());
+    }
+
     @PatchMapping("/{projectId}/members/{userId}")
     Member changeRole(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable long projectId,
                       @PathVariable long userId, @RequestBody MemberRoleRequest body) {

@@ -1,4 +1,4 @@
-import { FolderOpen, KeyRound, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
+import { FolderOpen, KeyRound, ShieldCheck, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
@@ -71,6 +71,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               <FolderOpen size={18} aria-hidden="true" />
               {t('nav.projects')}
             </NavLink>
+            {user.accountRole === 'ADMIN' && (
+              <NavLink to="/admin" data-testid="nav-admin">
+                <ShieldCheck size={18} aria-hidden="true" />
+                {t('nav.admin')}
+              </NavLink>
+            )}
             <NavLink to="/change-password" data-testid="nav-password">
               <KeyRound size={18} aria-hidden="true" />
               {t('nav.password')}

@@ -59,7 +59,8 @@ public class SecurityConfig {
                         .sessionRegistry(sessions)
                         .expiredSessionStrategy(event -> unauthorized(event.getResponse(), json)))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/logout", "/auth/password-reset",
+                                "/auth/password-reset/confirm").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())

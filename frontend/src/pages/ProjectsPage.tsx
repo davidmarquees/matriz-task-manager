@@ -1,7 +1,7 @@
 import { ArrowUpRight, FolderOpen, Plus, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import {
   createProject,
@@ -23,6 +23,10 @@ export function ProjectsPage() {
   const { t } = useTranslation();
   const { state } = useAuth();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusParam = searchParams.get('status');
+  const statusFilter = statusParam === 'TODO' || statusParam === 'IN_PROGRESS' || statusParam === 'DONE' ? statusParam : null;
+  const projectLink = (id: number) => (statusFilter ? `/projects/${id}?status=${statusFilter}` : `/projects/${id}`);
   const canCreate = state.status === 'authenticated' && state.user.accountRole === 'MANAGER';
 
   const [search, setSearch] = useState('');
@@ -81,6 +85,16 @@ export function ProjectsPage() {
       )}
 
       <section className="tile">
+        {statusFilter && (
+          <p className="alert alert-info" data-testid="projects-status-hint">
+            <span>
+              {t('projects.statusHint', { status: t(`status.${statusFilter}`) })}{' '}
+              <button type="button" className="link-button" onClick={() => setSearchParams({})}>
+                {t('projects.clearFilter')}
+              </button>
+            </span>
+          </p>
+        )}
         <label className="field" style={{ maxWidth: 420 }}>
           {t('projects.search')}
           <span style={{ position: 'relative', display: 'block' }}>
@@ -116,7 +130,7 @@ export function ProjectsPage() {
               {load.data.items.map((project) => (
                 <li key={project.id} className="project-row" data-testid="project-item">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                    <Link className="project-name" to={`/projects/${project.id}`} data-testid="project-link">
+                    <Link className="project-name" to={projectLink(project.id)} data-testid="project-link">
                       {project.name}
                     </Link>
                     <span className="row" style={{ gap: 8 }}>
@@ -127,7 +141,7 @@ export function ProjectsPage() {
                     </span>
                   </div>
                   <div className="bars">{project.taskCounts && <CountsBar counts={project.taskCounts} />}</div>
-                  <Link className="arrow-link" to={`/projects/${project.id}`} aria-label={t('dashboard.openProject', { name: project.name })}>
+                  <Link className="arrow-link" to={projectLink(project.id)} aria-label={t('dashboard.openProject', { name: project.name })}>
                     <ArrowUpRight size={18} aria-hidden="true" />
                   </Link>
                 </li>

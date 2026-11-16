@@ -30,6 +30,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import pt.matriz.accounts.AccountService;
 import pt.matriz.accounts.AccountView;
+import pt.matriz.accounts.PasswordResetService;
 import pt.matriz.web.ApiException;
 
 /** Auth operations of openapi.yaml: login, logout, getMe, changeOwnPassword. */
@@ -43,10 +44,12 @@ class AuthController {
     private final SecurityContextRepository contexts;
     private final CsrfTokenRepository csrfTokens;
     private final SessionRegistry sessions;
+    private final PasswordResetService passwordReset;
 
     AuthController(AccountService accounts, LoginRateLimiter rateLimiter,
                    SessionAuthenticationStrategy loginSessionStrategy, SecurityContextRepository contexts,
-                   CsrfTokenRepository csrfTokens, SessionRegistry sessions) {
+                   CsrfTokenRepository csrfTokens, SessionRegistry sessions, PasswordResetService passwordReset) {
+        this.passwordReset = passwordReset;
         this.accounts = accounts;
         this.rateLimiter = rateLimiter;
         this.loginSessionStrategy = loginSessionStrategy;
@@ -112,6 +115,31 @@ class AuthController {
     CurrentUserResponse updatePreferences(@RequestBody PreferencesRequest body,
                                           @AuthenticationPrincipal AuthenticatedUser user) {
         return CurrentUserResponse.of(accounts.updatePreferences(user.id(), body.locale(), body.theme()));
+    }
+
+    record ResetRequest(String email) {
+    }
+
+    record ResetConfirmRequest(String token, String newPassword) {
+    }
+
+    /** requestPasswordReset: always 202, whether or not the email exists (D30, D31, D36). */
+    @PostMapping("/password-reset")
+    ResponseEntity<Void> requestPasswordReset(@RequestBody ResetRequest body) {
+        passwordReset.request(body.email());
+        return ResponseEntity.accepted().build();
+    }
+
+    /** confirmPasswordReset: new password with the emailed link; every session of the user ends (D34). */
+    @PostMapping("/password-reset/confirm")
+    ResponseEntity<Void> confirmPasswordReset(@RequestBody ResetConfirmRequest body) {
+        long userId = passwordReset.confirm(body.token(), body.newPassword());
+        for (Object principal : sessions.getAllPrincipals()) {
+            if (principal instanceof AuthenticatedUser user && user.id() == userId) {
+                sessions.getAllSessions(user, false).forEach(SessionInformation::expireNow);
+            }
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/password")

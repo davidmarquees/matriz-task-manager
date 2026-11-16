@@ -28,6 +28,12 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+  mail:
+    # Development: Mailpit (docker-compose.yml), no real emails are sent
+    host: ${MATRIZ_MAIL_HOST:localhost}
+    port: ${MATRIZ_MAIL_PORT:1025}
+    username: ${MATRIZ_MAIL_USERNAME:}
+    password: ${MATRIZ_MAIL_PASSWORD:}
   mvc:
     problemdetails:
       enabled: true
@@ -54,6 +60,9 @@ server:
     include-message: never
 
 management:
+  health:
+    mail:
+      enabled: false # the mail server being down must not mark the application as down (D36)
   endpoints:
     web:
       exposure:
@@ -64,6 +73,12 @@ management:
 
 matriz:
   cookie-secure: ${MATRIZ_COOKIE_SECURE:false}
+  # Address of the interface, used in the password reset link
+  app-url: ${MATRIZ_APP_URL:http://localhost:5173}
+  mail-from: ${MATRIZ_MAIL_FROM:Matriz <no-reply@example.test>}
+  password-reset:
+    expiry: 30m # A22
+    max-per-hour: 3 # A22, D31
   login:
     rate-limit:
       # Login attempts per client IP address in the window; above that, 429

@@ -123,6 +123,45 @@ public class User {
         theme = newTheme;
     }
 
+    @Column(name = "deactivated_at")
+    private OffsetDateTime deactivatedAt;
+
+    /** FR1b: deactivated accounts cannot log in; their name stays on past work. */
+    void deactivate(OffsetDateTime now) {
+        status = Status.DEACTIVATED;
+        deactivatedAt = now;
+    }
+
+    /** Returning person: same account, new initial password that must be changed (FR1b, FR1e). */
+    void reactivate(String newHash) {
+        status = Status.ACTIVE;
+        deactivatedAt = null;
+        passwordHash = newHash;
+        mustChangePassword = true;
+        failedLoginAttempts = 0;
+        lockedUntil = null;
+    }
+
+    /** GDPR erasure (docs/database.md section 5): personal data removed, cannot be undone. */
+    void anonymise() {
+        status = Status.ANONYMISED;
+        name = null;
+        email = "removed-" + id + "@invalid";
+        passwordHash = null;
+    }
+
+    /** Successful password reset (D34): new password, lock and failed attempts cleared. */
+    void resetPassword(String newHash) {
+        passwordHash = newHash;
+        mustChangePassword = false;
+        failedLoginAttempts = 0;
+        lockedUntil = null;
+    }
+
+    public OffsetDateTime getDeactivatedAt() {
+        return deactivatedAt;
+    }
+
     void changePassword(String newHash) {
         passwordHash = newHash;
         mustChangePassword = false;

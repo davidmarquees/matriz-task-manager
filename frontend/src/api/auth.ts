@@ -40,3 +40,12 @@ export type Theme = CurrentUser['theme'];
 export function updatePreferences(changes: { locale?: CurrentUser['locale']; theme?: Theme }): Promise<CurrentUser> {
   return api<CurrentUser>('/auth/me/preferences', { method: 'PATCH', body: changes });
 }
+
+/** requestPasswordReset: always 202, whether or not the email exists (D30). */
+export function requestPasswordReset(email: string): Promise<void> {
+  return api<void>('/auth/password-reset', { method: 'POST', body: { email }, notifySessionExpired: false });
+}
+
+export function confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+  return api<void>('/auth/password-reset/confirm', { method: 'POST', body: { token, newPassword }, notifySessionExpired: false });
+}

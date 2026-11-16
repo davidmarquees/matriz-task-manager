@@ -23,7 +23,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
   if (state.status === 'anonymous') {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    // after an explicit logout, the next person to log in starts on the dashboard
+    return <Navigate to="/login" replace state={state.loggedOut ? undefined : { from: location.pathname }} />;
   }
   if (state.user.mustChangePassword && location.pathname !== '/change-password') {
     return <Navigate to="/change-password" replace />;

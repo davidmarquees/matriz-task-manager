@@ -131,7 +131,12 @@ function DashboardContent({ data, canCreate }: { data: Dashboard; canCreate: boo
                 <span className={`dot ${key === 'TODO' ? 'dot-todo hatch' : key === 'DONE' ? 'dot-done' : 'dot-progress'}`} aria-hidden="true" />
                 {t(`statusCount.${key}`)}
               </span>
-              <Link className="arrow-link" to="/projects" aria-label={`${t('dashboard.seeProjects')}: ${t(`statusCount.${key}`)}`}>
+              <Link
+                className="arrow-link"
+                to={`/projects?status=${key}`}
+                aria-label={`${t('dashboard.seeProjects')}: ${t(`statusCount.${key}`)}`}
+                data-testid={`dashboard-kpi-${key}-link`}
+              >
                 <ArrowUpRight size={18} aria-hidden="true" />
               </Link>
             </div>

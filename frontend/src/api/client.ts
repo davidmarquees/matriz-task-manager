@@ -74,8 +74,6 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     }
     throw new ApiError(response.status, problem);
   }
-  if (response.status === 204) {
-    return undefined as T;
-  }
-  return (await response.json()) as T;
+  const text = await response.text(); // 202 and 204 have no body
+  return (text ? JSON.parse(text) : undefined) as T;
 }

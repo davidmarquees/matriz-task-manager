@@ -108,3 +108,68 @@ Not checked in this increment: an automated contrast audit (contrast ratios were
 |---|---|---|---|---|---|
 | V-39 | Search, dropdowns and inputs share height and radius | Manual | Every search field, input, date and dropdown has the same height, radius, border and arrow, in every page and both themes | Before: search and form fields 46 px with 14 px corners; dropdowns in task rows and member roles 40 px pill-shaped with the browser's own arrow. After: every control 46 px / 14 px (measured on the project page: 15 controls, task page: 6, projects page: 3), same border and a drawn arrow in light and dark; textareas keep 14 px corners with a larger height | `getBoundingClientRect` and `getComputedStyle` in the browser; screenshots before / after |
 
+
+## Increment 7 — Ex. 8 · scenarios 01–09, 2026-11-16
+
+Fresh run of every check on the code of this increment. Manual checks in the browser on ports 8081 (backend, started from the built jar) and 5174 (Vite), with the demo accounts Gestor Demo (Manager) and Membro Demo (Member) and the development database; API checks with `curl` and a cookie jar per user. The test project "Verificação Ex8" was created for the run and deleted in scenario 09. "Auto" = automated test, "Manual" = done by hand in the browser or with `curl`.
+
+### Commands and overall results
+
+| Command | Result |
+|---|---|
+| `cd backend && ./mvnw -B verify` | 81 tests, 0 failures, 0 errors, BUILD SUCCESS (the logged "Password reset email could not be sent" is the expected output of the D36 test) |
+| `cd frontend && npm test` | 19 tests passed (7 files), including the regression test of the bug below |
+| `cd frontend && npm run build` | OK |
+| `npx @redocly/cli lint openapi.yaml` (0.7.0) | Valid; the same 2 accepted warnings |
+| `cd frontend && npm run e2e` (Playwright 1.64.1, Google Chrome, against 5174 and a database for tests only, `matriz_verify`) | 5 passed, after the bug fix and without the earlier workaround |
+
+### Required automated tests (Worksheet: validation, authorisation, create then read)
+
+| Rule | Test | Result |
+|---|---|---|
+| Validation rule | `TasksApiTest.refusesInvalidTaskData` (blank title, invalid status, priority and date → 422, nothing saved) | Passed |
+| Authorisation | `ProjectsApiTest.nonMembersCannotSeeAProjectEvenByChangingTheId` (a non-member gets 404 for project, members and tasks of another project) | Passed |
+| Create and read back from the database | `ProjectsApiTest.managerCreatesAProjectThatIsSavedAndListed` (201, then the row is read from PostgreSQL and listed) | Passed |
+
+### Scenarios
+
+| # | Scenario | Type | Expected | Observed | Evidence |
+|---|---|---|---|---|---|
+| 01 | Access to the application | Manual + Auto | Valid credentials log in; invalid ones get a generic error with the form kept; requests without a session are refused | Wrong password: "Email ou palavra-passe inválidos." (in EN "Invalid email or password."), email kept in the field. Correct password: logged in and sent back to `/projects`, the page asked before login. `GET /api/projects` without session → 401; `POST /api/auth/login` without CSRF token → 403 | Browser; `curl`; `AuthFlowTest`, `SessionTimeoutTest` (session expires after inactivity → 401) |
+| 02 | Project management | Manual + Auto | Create, search, edit and delete work according to permissions | Created "Verificação Ex8" (toast, listed at once); search "verifica" found it (1 project); renamed to "Verificação Ex8 (editado)" (toast "Changes saved."); deleted in scenario 09. Member: `POST /projects` → 403, `PATCH` and `DELETE /projects/20` → 403 (member, not Manager) | Browser; `curl`; `ProjectsApiTest` |
+| 03 | Task persistence | Manual | The task appears without reloading and is kept after restarting the backend | "Tarefa Ex8" (priority High) appeared in the list and the counts changed to "1 to do" without reloading. After stopping and starting the backend (22:51), the session had ended (sessions are in memory, as documented); after logging in again the page showed "Tarefa Ex8 / High" | Browser; backend log "Started MatrizApplication" |
+| 04 | Data validation | Manual + Auto | Empty or spaces-only required fields and invalid values are refused | Interface: project name with spaces only → "The name is required.", description kept; task title with spaces → "The title is required and cannot be only spaces."; comment with spaces → "The comment cannot be empty or only spaces.". API: name `"   "` → 422 BLANK; name of 101 characters → 422 TOO_LONG; task title `"  "` → 422 BLANK; priority `URGENT`, status `LATER` → 422 INVALID_VALUE; date `2026-02-30` → 422 INVALID_DATE; title as a number → 422 INVALID_VALUE; comment `"   "` → 422 BLANK. No task was created by these requests | Browser; `curl`; `TasksApiTest.refusesInvalidTaskData`, `ProjectsApiTest` |
+| 05 | Status and priority | Manual + Auto | Editing updates the task, the filters and the counts consistently | Status To do → In progress in the row: counts "0 to do 1 in progress 0 done" at once; filter To do → 0 tasks, In progress → 1. Priority High → Low: filter High → 0, Low → 1 | Browser; `TasksApiTest` (counts and dashboard) |
+| 06 | Assignees | Manual + Auto | Add and remove work; the same assignment is never duplicated | Added Membro Demo (list shows "Membro Demo"; the select no longer offers them); removed with the dialog (0 assignees); added again. Duplicate request → 409 ALREADY_ASSIGNED; two identical requests at the same moment → one 201 and one 409, one row (5 rounds) | Browser; `AssigneesAndCommentsApiTest`, `ConcurrencyTest` (D21) |
+| 07 | Comments | Manual + Auto | Content, authenticated author and date are saved and shown | "Comentário de verificação Ex8" shown with "Gestor Demo · 16/11/2026 22:52"; `GET /tasks/21/comments` returned the same body, author id 1 and `createdAt`. The author comes from the session, not from the request | Browser; `curl`; `AssigneesAndCommentsApiTest` |
+| 08 | Authorisation in the API | Manual + Auto | Another user cannot read or change resources without permission, even by changing ids | Member (not in "Annual report", id 2): `GET /projects/2` → 404, `GET /tasks/6` → 404, `PATCH /tasks/6` → 404, `POST /tasks/6/comments` → 404, `GET /projects/2/activity` → 404, `GET /projects/99999` → 404 (same answer as a missing project, so ids reveal nothing). As member of project 20: `PATCH`/`DELETE /projects/20` → 403, `GET /projects/20/activity` → 403. `GET /admin/users` → 403. Afterwards the task title ("Review the draft") and the project name were unchanged. Comments have no edit or delete operation in the contract (route → 404) | `curl` with the member's session; `ProjectsApiTest.nonMembersCannotSeeAProjectEvenByChangingTheId`, `TasksApiTest`, `ActivityApiTest`, `AdminApiTest.onlyTheAdminManagesAccounts` |
+| 09 | Deletion and errors | Manual + Auto | Deletion respects dependencies; API errors never show success nor lose form data | Conflict: with the edit form open, the project was changed in another session (`PATCH` 200); saving the form showed "Someone else changed the project. Reload the data and try again." with a Reload button, the typed name kept, no toast. Deletion: dialog "The project … its tasks and comments will be deleted. This cannot be undone." opened with the focus on Cancel; after confirming, "Project deleted." and back to the list; `GET /projects/20`, `/tasks/21`, `/tasks/21/comments` → 404; in the database 0 tasks, comments, assignees and members of the project; the 13 activity log rows are kept (append-only). Server error: generic 500 without internal details, nothing saved | Browser; `curl`; `psql`; `FailureHandlingTest`, `ProjectsApiTest`, `TasksApiTest` |
+
+### Extra checks of this increment (approved improvements)
+
+| # | Scenario | Type | Expected | Observed | Evidence |
+|---|---|---|---|---|---|
+| V-40 | Concurrent changes (D16, D21) | Auto | Two Managers demoting each other at once leave one Manager; the same assignee added twice at once gives one row | 5 rounds each: statuses {200, 409} and {201, 409}; always 1 Manager and 1 row | `ConcurrencyTest` |
+| V-41 | Session expiry (A18) and server errors (D28, D29) | Auto | Session timeout 30 min; an expired session gets 401; a database failure gives a generic 500 and saves nothing | As expected | `SessionTimeoutTest`, `FailureHandlingTest` |
+| V-42 | Filter by assignee (US6) and dashboard ↗ by status | Auto + Manual | Assignee filter with "Eu"; the ↗ of a total opens the projects with that status filter and keeps it on the project page | As expected; E2E clicked the "Done" ↗ and saw the filter hint | `TasksSection.test.tsx`; `main-flow.spec.ts` |
+| V-43 | Project history (FR13, US12) | Auto + Manual | Managers read who changed what and when; Members get 403, non-members 404 | As expected; the project showed 13 entries before deletion | `ActivityApiTest`; `main-flow.spec.ts`; browser |
+| V-44 | Password reset by email (US11, D30–D36) | Auto + Manual | Same answer for any email; link by email, single use, 30 min; sessions end; mail server failure gives the same answer | Browser on 5174 with Mailpit: "Se o email pertencer a uma conta ativa, enviámos um link…"; Mailpit received "Matriz · Redefinir a palavra-passe" for member@example.test with a link to `http://localhost:5174/reset-password?token=…` valid for 30 minutes; the new password was saved ("Palavra-passe alterada…"; the demo password was set again, so the account is unchanged); the same link again → "O link é inválido, expirou ou já foi usado." with "Pedir novo link"; login with the password → 200 | `PasswordResetTest` (5); `PasswordReset.test.tsx`; browser; Mailpit API |
+| V-45 | Account administration (US9, US10, US12, D1–D5, D12, D14, D19, D44) | Auto + Manual | Admin only; create (email unique, must change password); deactivate (sessions end, memberships and assignments removed, tasks kept); refused for own account and for the only Manager until another is appointed; reactivate with a new initial password and no projects; anonymise only after deactivation, final; audit log without personal values | As expected. Browser on a database for tests only (`matriz_verify`, approved by David, deleted at the end): first Admin login → "Tem de alterar a palavra-passe antes de continuar.", then the "Contas" menu item; own account has no "Desativar"; deactivating Gestor Demo → "Esta pessoa é a única gestora de um projeto…", no toast; as Admin the project page showed "Como Administrador vê os dados e os membros do projeto, mas não as tarefas.", no tasks and no edit button; appointing the Admin → "Esse email não pertence a uma conta ativa…"; appointing Membro Demo → "Gestor nomeado." in both projects (added to the second); then Gestor Demo deactivated with the dialog; reactivation with a 5-character password → refused, with 8+ → "Conta reativada…"; deactivated again and anonymised → "Utilizador removido", `removed-1@invalid`, only "Auditoria" left; the audit of that account listed all 10 actions with "Administrador" or "Sistema" as actor; 360 px: no horizontal scrolling on the Admin, forgot-password and reset pages | `AdminApiTest` (7); `AdminPage.test.tsx` (2); `admin.spec.ts`; browser |
+| V-46 | Automatic accessibility audit (NFR6) | Auto | No serious or critical axe-core violation (WCAG 2.1 A/AA rules) on login, password reset, dashboard, projects, project and task pages, light and dark | 0 serious or critical violations in both themes | `accessibility.spec.ts` (report in `frontend/playwright-report`) |
+
+### Bug found during the E2E run: next login opened the previous user's page (fixed)
+
+- **Steps:** log in as Membro Demo, open a project page, log out with the menu button; on the same browser tab log in as Gestor Demo.
+- **Expected:** after an explicit logout, the next login opens the dashboard.
+- **Observed:** the next login opened the project page the previous user had open (`/projects/{id}`). The server still checks access, so no data leaked.
+- **Evidence:** Playwright snapshot of the failing first E2E run (Manager on the project page instead of the dashboard); in the browser, after logout `history.state.usr` was `{"from":"/projects/1"}`.
+- **Cause:** `AuthContext.logout()` sets the state to anonymous; `RequireAuth` then redirects to `/login` keeping `state.from` = the current page; `LoginPage` sends the next user there. The shell's own `navigate('/login')` only sometimes wins the race (it did in jsdom, not in the browser).
+- **Fix (approved by David, limited to two files):** an explicit logout sets `loggedOut: true` in the anonymous state, and `RequireAuth` redirects without `from` in that case. An expired session or a first visit still returns to the page that asked for the login.
+- **Regression test:** `LogoutRedirect.test.tsx` (2 tests). The first one failed with the old code (1 failed, 1 passed) and passes with the fix; the second checks that the redirect to the requested page still works.
+- **Checked:** browser after the fix: `history.state.usr` after logout `null`; Gestor Demo then landed on `/`. The E2E main flow passes without its workaround.
+
+### Not executed or limited
+
+- The real reactivation login of a reactivated account (forced password change) was checked by `AdminApiTest`, not by hand.
+- Network failure in the browser (backend down while submitting a form): not run by hand; the error path is the same as the 409 and 422 cases above and the 500 case is covered by `FailureHandlingTest`.
+- Screen readers: not tested; axe-core finds only automatic issues.

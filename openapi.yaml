@@ -1,16 +1,15 @@
 openapi: 3.1.0
 info:
   title: Matriz API
-  version: 0.5.0
+  version: 0.7.0
   license:
     name: Proprietary
   summary: REST API of Matriz, a project and task management application (MVP).
   description: |
-    Contract for the Worksheet 03 scope (docs/implementation-plan.md, section 6): authentication
-    (including the change of the user's own password, approved for increment 2), projects and members,
-    tasks, assignees, comments and the dashboard. Operations outside that scope (account
-    administration, password reset, preferences, audit and activity log reading) are optional (plan
-    decision P9) and will be added here only if that increment is approved.
+    Contract of the Matriz MVP (docs/implementation-plan.md): authentication (login, logout, current
+    user, own password change, password reset by email, preferences), projects and members, tasks,
+    assignees, comments, the dashboard, the project activity log, and account administration with the
+    user audit log. The optional operations were approved on 2026-11-16 (Worksheet 03, Ex. 8).
 
     Legend: [D] confirmed decision · [A] assumption (to be confirmed) · [P] pending decision.
 
@@ -99,6 +98,8 @@ tags:
     description: Comments on a task (FR11).
   - name: Dashboard
     description: Projects of the user with task counts per status (FR9).
+  - name: Admin
+    description: Account administration and the user audit log (FR1a, FR1b, FR1d); Admin account only.
 
 paths:
   /auth/login:
@@ -238,6 +239,313 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/password-reset:
+    post:
+      tags: [Auth]
+      operationId: requestPasswordReset
+      summary: Ask for a password reset link by email
+      description: |
+        Always 202, whether or not the email belongs to an active account (D30). At most 3 emails per
+        account per hour (D31); a new request invalidates older links (D33). The link is single-use and
+        expires after 30 minutes (A22). A mail server failure gives the same answer (D36).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '202':
+          description: Request accepted. If the account exists and is active, an email is on its way.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/password-reset/confirm:
+    post:
+      tags: [Auth]
+      operationId: confirmPasswordReset
+      summary: Set a new password with the emailed link
+      description: |
+        Invalid, expired or used link → 422 `INVALID_TOKEN` (D32); password under 8 characters → 422
+        `TOO_SHORT` (D35). On success (D34): the link is used up, other links invalidated, the lock and
+        failed attempts cleared, every session of the user ended, and the change audited.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+      responses:
+        '204':
+          description: Password changed; the user can log in with it.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      operationId: listAccounts
+      summary: List accounts (Admin)
+      description: Every account, sorted by name, optionally filtered by status and by text in the name or email. Admin only (D2).
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ACTIVE, DEACTIVATED, ANONYMISED]
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: The accounts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminAccount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Admin]
+      operationId: createAccount
+      summary: Create an account (Admin)
+      description: |
+        Manager or Member account with an initial password that must be changed at the first login (FR1a,
+        FR1e, US9). An email already used by any account, deactivated included, → 409 `EMAIL_IN_USE` (D1).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountCreateRequest'
+      responses:
+        '201':
+          description: Account created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAccount'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/users/{userId}/deactivate:
+    post:
+      tags: [Admin]
+      operationId: deactivateAccount
+      summary: Deactivate an account (Admin)
+      description: |
+        The account can no longer log in, its sessions end at the next request and it leaves every project
+        (assignments removed, tasks and comments kept; FR1b, E1). Refused with 409: not active
+        (`NOT_ACTIVE`, D3), own account or last active Admin (`LAST_ADMIN`, D4), only Manager of a project
+        (`ONLY_MANAGER`, D5).
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAccount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/users/{userId}/reactivate:
+    post:
+      tags: [Admin]
+      operationId: reactivateAccount
+      summary: Reactivate an account with a new initial password (Admin)
+      description: |
+        Same account and email; the password must be changed at the first login; no projects until added
+        again (D19). Refused with 409 when the account is active (`ALREADY_ACTIVE`) or anonymised
+        (`ANONYMISED`, D44).
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitialPasswordRequest'
+      responses:
+        '200':
+          description: Reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAccount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/users/{userId}/anonymise:
+    post:
+      tags: [Admin]
+      operationId: anonymiseAccount
+      summary: Anonymise a deactivated account (Admin, GDPR)
+      description: |
+        Name removed, email replaced by `removed-<id>@invalid`, password removed; past work shows
+        "Removed user". Cannot be undone. Only a deactivated account (409 `NOT_DEACTIVATED`; already
+        anonymised → 409 `ANONYMISED`, D44).
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Anonymised.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAccount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/audit:
+    get:
+      tags: [Admin]
+      operationId: listUserAudit
+      summary: Read the user audit log (Admin)
+      description: Every change to accounts and memberships, newest first (FR1d, US12); optionally about one account. Admin only (D38).
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Id'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of audit entries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /projects/{projectId}/managers:
+    post:
+      tags: [Members]
+      operationId: appointManager
+      summary: Appoint a project Manager
+      description: |
+        The Admin account or a project Manager (FR3, D12). The user, identified by email, must be an active,
+        non-Admin account (422 `USER_NOT_ELIGIBLE`, D14); added to the project if needed, otherwise promoted.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointManagerRequest'
+      responses:
+        '200':
+          description: The user is now a Manager of the project.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
@@ -431,6 +739,40 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /projects/{projectId}/activity:
+    get:
+      tags: [Projects]
+      operationId: listProjectActivity
+      summary: Read the project's activity log
+      description: |
+        Every change inside the project, newest first (FR13, US12): who, what and when, with the
+        values before and after. Only the project's Managers (A23, D41): a Member or the Admin account
+        gets 403, a non-member 404 (D42). Comment text is never part of the log. People are shown by
+        their current account (anonymised accounts as "Removed user"). Approved on 2026-11-16.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of activity entries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -1047,6 +1389,133 @@ components:
           type: string
           enum: [LIGHT, DARK, SYSTEM]
 
+    PasswordResetRequest:
+      type: object
+      required: [email]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          maxLength: 254
+
+    PasswordResetConfirmRequest:
+      type: object
+      required: [token, newPassword]
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          maxLength: 200
+          description: The token from the emailed link.
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 72
+
+    AdminAccount:
+      type: object
+      required: [id, accountRole, status, mustChangePassword, createdAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        name:
+          type: [string, 'null']
+          description: null when anonymised.
+        email:
+          type: string
+        accountRole:
+          $ref: '#/components/schemas/AccountRole'
+        status:
+          type: string
+          enum: [ACTIVE, DEACTIVATED, ANONYMISED]
+        mustChangePassword:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        deactivatedAt:
+          type: [string, 'null']
+          format: date-time
+
+    AccountCreateRequest:
+      type: object
+      required: [name, email, accountRole, initialPassword]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          maxLength: 254
+        accountRole:
+          type: string
+          enum: [MANAGER, MEMBER]
+        initialPassword:
+          type: string
+          minLength: 8
+          maxLength: 72
+
+    InitialPasswordRequest:
+      type: object
+      required: [initialPassword]
+      additionalProperties: false
+      properties:
+        initialPassword:
+          type: string
+          minLength: 8
+          maxLength: 72
+
+    AppointManagerRequest:
+      type: object
+      required: [email]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          maxLength: 254
+
+    AuditEntry:
+      type: object
+      required: [id, targetUser, action, createdAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        actor:
+          description: Who made the change; null for system actions (account lock, seed data, password reset).
+          oneOf:
+            - $ref: '#/components/schemas/UserSummary'
+            - type: 'null'
+        targetUser:
+          $ref: '#/components/schemas/UserSummary'
+        action:
+          type: string
+          description: One of the actions listed in docs/database.md (user_audit_log).
+        projectId:
+          type: [integer, 'null']
+        projectName:
+          type: [string, 'null']
+        oldValue:
+          type: [object, 'null']
+          additionalProperties: true
+        newValue:
+          type: [object, 'null']
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditEntry'
+
     PasswordChangeRequest:
       type: object
       required: [currentPassword, newPassword]
@@ -1393,6 +1862,47 @@ components:
                 type: [string, 'null']
                 description: Value after; always null for `description` and `assignees`.
 
+    ActivityEntry:
+      type: object
+      required: [id, actor, entityType, entityId, action, createdAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        actor:
+          $ref: '#/components/schemas/UserSummary'
+        entityType:
+          type: string
+          enum: [PROJECT, MEMBER, TASK, ASSIGNEE, COMMENT]
+        entityId:
+          $ref: '#/components/schemas/Id'
+        action:
+          type: string
+          enum: [CREATED, UPDATED, DELETED, ADDED, REMOVED]
+        entityUser:
+          description: The member or assignee concerned (MEMBER and ASSIGNEE entries); otherwise absent.
+          $ref: '#/components/schemas/UserSummary'
+        entityTitle:
+          type: [string, 'null']
+          description: Task title (TASK, ASSIGNEE, COMMENT entries; the title at the time for a deleted task) or project name (PROJECT entries).
+        changes:
+          type: [object, 'null']
+          description: Changed fields with old and new values, e.g. {"status":{"old":"TODO","new":"DONE"}}. Never contains comment text or personal data.
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+
+    ActivityPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ActivityEntry'
+
     TaskPage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -1478,7 +1988,8 @@ components:
         code:
           type: string
           description: Machine-readable reason for 409 responses; the frontend maps it to a message.
-          enum: [VERSION_CONFLICT, ALREADY_MEMBER, ALREADY_ASSIGNED, LAST_MANAGER]
+          enum: [VERSION_CONFLICT, ALREADY_MEMBER, ALREADY_ASSIGNED, LAST_MANAGER, EMAIL_IN_USE, NOT_ACTIVE,
+                 LAST_ADMIN, ONLY_MANAGER, ALREADY_ACTIVE, ANONYMISED, NOT_DEACTIVATED]
 
     ValidationProblem:
       allOf:
@@ -1498,7 +2009,7 @@ components:
                   code:
                     type: string
                     description: Machine-readable rule; the frontend maps it to a message in the user's language.
-                    enum: [REQUIRED, TOO_SHORT, TOO_LONG, BLANK, INVALID_VALUE, INVALID_DATE, DUPLICATE, NOT_A_PROJECT_MEMBER, USER_NOT_ELIGIBLE, WRONG_PASSWORD, SAME_AS_CURRENT]
+                    enum: [REQUIRED, TOO_SHORT, TOO_LONG, BLANK, INVALID_VALUE, INVALID_DATE, DUPLICATE, NOT_A_PROJECT_MEMBER, USER_NOT_ELIGIBLE, WRONG_PASSWORD, SAME_AS_CURRENT, INVALID_TOKEN]
 
   responses:
     BadRequest:

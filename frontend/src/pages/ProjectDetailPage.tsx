@@ -1,7 +1,7 @@
 import { ArrowLeft, Pencil, SearchX, Trash2, UserPlus } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import {
   addMember,
@@ -18,6 +18,8 @@ import {
   type ProjectRole,
 } from '../api/projects';
 import { useAuth } from '../auth/AuthContext';
+import { appointManager } from '../api/admin';
+import { ActivitySection } from '../components/ActivitySection';
 import { CountsBar } from '../components/CountsBar';
 import { TasksSection } from '../components/TasksSection';
 import { userLabel } from '../labels';
@@ -34,6 +36,9 @@ type Load =
 export function ProjectDetailPage() {
   const { t } = useTranslation();
   const id = Number(useParams().projectId);
+  const [searchParams] = useSearchParams();
+  const statusParam = searchParams.get('status');
+  const initialStatus = statusParam === 'TODO' || statusParam === 'IN_PROGRESS' || statusParam === 'DONE' ? statusParam : '';
   const navigate = useNavigate();
   const { state } = useAuth();
   const { confirm, toast } = useFeedback();
@@ -41,11 +46,13 @@ export function ProjectDetailPage() {
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activityKey, setActivityKey] = useState(0); // refreshes the history after a change
 
   const reload = useCallback(async () => {
     try {
       const [project, members] = await Promise.all([getProject(id), listMembers(id)]);
       setLoad({ status: 'ready', project, members });
+      setActivityKey((k) => k + 1);
     } catch (e) {
       if (e instanceof ApiError && (e.status === 404 || e.status === 400)) setLoad({ status: 'not-found' });
       else if (!(e instanceof ApiError && e.status === 401)) setLoad({ status: 'error' });
@@ -57,6 +64,7 @@ export function ProjectDetailPage() {
     try {
       const project = await getProject(id);
       setLoad((current) => (current.status === 'ready' ? { ...current, project } : current));
+      setActivityKey((k) => k + 1);
     } catch {
       // the next full reload shows the error
     }
@@ -92,6 +100,7 @@ export function ProjectDetailPage() {
 
   const { project, members } = load;
   const isManager = project.myRole === 'MANAGER';
+  const isAdmin = state.status === 'authenticated' && state.user.accountRole === 'ADMIN';
 
   async function onDelete() {
     const ok = await confirm({
@@ -172,10 +181,21 @@ export function ProjectDetailPage() {
         />
       )}
 
+      {isAdmin && (
+        <Alert kind="info" testId="project-admin-note">
+          {t('admin.adminProjectNote')}
+        </Alert>
+      )}
       <div className="grid-main">
-        <TasksSection projectId={project.id} onTasksChanged={() => void refreshCounts()} />
+        {isAdmin ? (
+          <AppointManagerForm projectId={project.id} onAppointed={reload} />
+        ) : (
+          <TasksSection projectId={project.id} initialStatus={initialStatus} onTasksChanged={() => void refreshCounts()} />
+        )}
         <MembersSection projectId={project.id} members={members} canManage={isManager} currentUserId={currentUserId} onChanged={reload} />
       </div>
+
+      {isManager && <ActivitySection projectId={project.id} refreshKey={activityKey} />}
     </main>
   );
 }
@@ -413,6 +433,65 @@ function MembersSection({
           </div>
         </form>
       )}
+    </section>
+  );
+}
+
+/** The Admin account appoints a Manager, e.g. before deactivating the only one (FR3, D12, D14). */
+function AppointManagerForm({ projectId, onAppointed }: { projectId: number; onAppointed: () => Promise<void> }) {
+  const { t } = useTranslation();
+  const { toast } = useFeedback();
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (pending) return;
+    if (!email.trim()) {
+      setError(t('members.emailRequired'));
+      return;
+    }
+    setPending(true);
+    setError(null);
+    try {
+      await appointManager(projectId, email.trim());
+      toast(t('admin.appointed'));
+      setEmail('');
+      await onAppointed();
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) return;
+      if (e instanceof ApiError && e.fieldCode('email') === 'USER_NOT_ELIGIBLE') setError(t('admin.appointNotEligible'));
+      else if (e instanceof ApiError && e.fieldCode('email')) setError(t('members.emailRequired'));
+      else setError(t('common.genericError'));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <section className="tile" aria-labelledby="appoint-title" data-testid="appoint-manager-section" style={{ alignSelf: 'start' }}>
+      <div className="stack" style={{ gap: 4 }}>
+        <h2 id="appoint-title">{t('admin.appointTitle')}</h2>
+        <p className="muted" style={{ fontSize: 13 }}>
+          {t('admin.appointText')}
+        </p>
+      </div>
+      <form className="form" onSubmit={onSubmit} noValidate data-testid="appoint-manager-form">
+        <label className="field">
+          {t('admin.appointEmail')}
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} data-testid="appoint-manager-email" />
+        </label>
+        {error && (
+          <Alert kind="error" testId="appoint-manager-error">
+            {error}
+          </Alert>
+        )}
+        <button type="submit" className="btn btn-primary" disabled={pending} data-testid="appoint-manager-submit" style={{ alignSelf: 'flex-start' }}>
+          <UserPlus size={16} aria-hidden="true" />
+          {t('admin.appoint')}
+        </button>
+      </form>
     </section>
   );
 }

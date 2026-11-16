@@ -5,7 +5,8 @@ import { SESSION_EXPIRED_EVENT } from '../api/client';
 
 type AuthState =
   | { status: 'loading' }
-  | { status: 'anonymous'; sessionExpired: boolean }
+  /** loggedOut: the user logged out on purpose, so the next login does not go back to their last page. */
+  | { status: 'anonymous'; sessionExpired: boolean; loggedOut?: boolean }
   | { status: 'authenticated'; user: CurrentUser };
 
 interface AuthContextValue {
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           await authApi.logout();
         } finally {
-          setState({ status: 'anonymous', sessionExpired: false });
+          setState({ status: 'anonymous', sessionExpired: false, loggedOut: true });
         }
       },
     }),
