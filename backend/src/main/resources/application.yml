@@ -1,0 +1,57 @@
+# Matriz backend configuration.
+# Every value that depends on the environment comes from an environment variable.
+# For local development the variables can be kept in the .env file at the repository root
+# (copy .env.example); real environment variables take precedence over that file.
+spring:
+  application:
+    name: matriz
+  profiles:
+    # "dev" adds the demo data (application-dev.yml); empty in production.
+    active: ${MATRIZ_PROFILE:}
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  datasource:
+    # Runtime connection: application database user (no UPDATE or DELETE on the logs, D39).
+    url: ${MATRIZ_DB_URL}
+    username: ${MATRIZ_DB_APP_USER}
+    password: ${MATRIZ_DB_APP_PASSWORD}
+  flyway:
+    # Migrations run as the database owner; the application user only gets the grants in V2.
+    user: ${MATRIZ_DB_OWNER_USER}
+    password: ${MATRIZ_DB_OWNER_PASSWORD}
+    locations: classpath:db/migration
+    placeholders:
+      appUser: ${MATRIZ_DB_APP_USER}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${MATRIZ_SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+matriz:
+  admin:
+    # Admin account created at the first start when no Admin exists (A25). Must change the password at first login.
+    name: ${MATRIZ_ADMIN_NAME:}
+    email: ${MATRIZ_ADMIN_EMAIL:}
+    password: ${MATRIZ_ADMIN_PASSWORD:}

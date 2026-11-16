@@ -26,6 +26,7 @@ build/
 node_modules/
 dist/
 coverage/
+*.tsbuildinfo
 
 # Testes E2E (Ficha 04)
 playwright-report/

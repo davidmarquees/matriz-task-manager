@@ -127,7 +127,7 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 | # | Exercise | Content | Status | Evidence |
 |---|---|---|---|---|
 | 0 | Ex. 1 | This plan, decisions, full contract, doc fixes | Done (2026-11-16) | Redocly CLI lint: valid, 0 errors, 2 accepted warnings (`localhost` server URL, intended for local development; `info-license-strict`, because a proprietary licence has no SPDX identifier or public URL); local YAML and `$ref` check: 22 operations, no missing references; commit `docs: add implementation plan, complete API contract and reconcile docs with Worksheet 03 scope` |
-| 1 | Ex. 2 | Skeleton, persistence, seed | Not started | — |
+| 1 | Ex. 2 | Skeleton, persistence, seed | Done (2026-11-16) | [verification.md](verification.md) V-01 to V-06; `./mvnw verify` 16 tests passed; commit pending |
 | 2 | Ex. 3 | Authentication and access rules | Not started | — |
 | 3 | Ex. 4 | Projects and members | Not started | — |
 | 4 | Ex. 5 | Tasks, filters, dashboard counts | Not started | — |
@@ -150,6 +150,12 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 - **Dependencies:** spring-boot-starter-web, -data-jpa, -validation, -security, -actuator, flyway, postgresql driver, testcontainers; react, react-dom, vite, vitest.
 - **Acceptance:** app starts against PostgreSQL; schema created; seed present; second start keeps data.
 - **Checks:** `mvn verify` (Testcontainers test: migration + one constraint per table), `npm run build`, start-up log, restart twice and count rows.
+- **As implemented (2026-11-16, approved by David):**
+  - Versions: Spring Boot 3.5.16, React 18.3.1, Vite 6.4.6, TypeScript 5.9.3 (frontend in TypeScript), Maven Wrapper 3.9.12; Java package `pt.matriz`.
+  - Two database users: owner (Flyway) and application user (runtime) with `INSERT` and `SELECT` only on the logs (`V2__app_user_grants.sql`); the application user is created by `docker/postgres/init/01-create-app-user.sh`.
+  - Seed: Java Flyway migration `db/seeddev/V2_1__Demo_data` (version 2.1, so later migrations stay in order), active only with `MATRIZ_PROFILE=dev`.
+  - Spring Security is not added yet (increment 2); only `spring-security-crypto` for BCrypt. `spring-boot-testcontainers` and Vitest were not needed yet.
+  - The `.env` at the repository root is read by the backend (`spring.config.import`) and by Vite (`envDir`).
 
 ### Increment 2 — Authentication (Ex. 3)
 - **Components:** security config (session, CSRF, JSON login, 401/403 handlers), lockout, `/auth/me`, membership check helper used by every later service; contract for auth; frontend login page, route guard, session-expired message, header with log out.

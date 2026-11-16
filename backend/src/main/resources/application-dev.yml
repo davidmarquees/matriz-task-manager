@@ -1,0 +1,9 @@
+# Development profile: adds the demo data (A25). Never enable this profile in production.
+spring:
+  flyway:
+    locations:
+      - classpath:db/migration
+      - classpath:db/seeddev
+    placeholders:
+      # Password of the two demo accounts; stored only as a BCrypt hash.
+      demoPassword: ${MATRIZ_DEMO_PASSWORD:}
