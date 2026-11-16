@@ -36,7 +36,7 @@
 | A22 | A password reset link expires after 30 minutes; at most 3 reset requests per email per hour. |
 | A23 | Only the project's Managers read its activity log; Members do not. |
 | A24 | Before login, the interface uses the browser's language if it is English, otherwise European Portuguese; after login, the language saved in the profile. Before login, the theme follows the system setting. |
-| A25 | Demo accounts (Manager, Member) are created only in the development environment. The Admin account is created at the first start from environment variables and must change its password at the first login. |
+| A25 | Demo accounts (Manager, Member) are created only in the development environment, without a forced password change, together with 2 demo projects that give them different access (one shared, one with the Manager only). The Admin account is created at the first start from environment variables and must change its password at the first login. |
 
 ## 3. Security and privacy
 
@@ -56,8 +56,8 @@ Still pending: see [architecture.md](architecture.md), section 7 (single list of
 
 ## 5. Pending product decisions
 
-- How the passwords of the pre-created accounts (Admin, Manager, Member) are shared without storing them in the repository (e.g. documented outside the repo, or a `.env.example` with placeholder values only). To decide in Worksheet 03.
-- Email sending for password reset: provider (SMTP server) and sender address. Proposed for the course: a local test mail server (e.g. Mailpit), no real emails sent.
+- Decided in Worksheet 03 (docs/implementation-plan.md, P6): the passwords of the pre-created accounts come from environment variables; the repository has only a `.env.example` with fictitious values.
+- Email sending for password reset: provider (SMTP server) and sender address. Proposed for the course: a local test mail server (e.g. Mailpit), no real emails sent. Only needed if the optional increment 8 is done (docs/implementation-plan.md, P9).
 - How long the two logs are kept (currently indefinitely). To decide with the client.
 
 Decided in Worksheet 02: GDPR erasure is done by anonymising the deactivated account; its tasks and comments stay and show "Removed user" (see [database.md](database.md), section 5).

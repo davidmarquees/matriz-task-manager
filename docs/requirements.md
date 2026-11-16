@@ -43,7 +43,7 @@ There is no self-service registration: accounts are created by the Admin. Three 
 | FR7 | Task priority: LOW, MEDIUM or HIGH. | [A] | High |
 | FR8 | A task can have several assignees, all members of the project. | [A] | High |
 | FR9 | Dashboard listing the projects the user is a member of, each with the number of tasks in each status. | G3 | High |
-| FR10 | Task text search (title and description) and filters by status, priority and assignee. | [A] | Medium |
+| FR10 | Task text search (title and description) and filters by status, priority and assignee; project search by name. | [A] | Medium |
 | FR11 | Project members comment on tasks (plain text). | [A] | Medium |
 | FR12 | Three pre-created accounts exist: Admin, Manager and Member; the Manager and Member accounts are the demo accounts for testing permissions. | [A] | Medium |
 | FR13 | Every change inside a project (project data, members, tasks, assignees, comments) is recorded in an activity log: who, what, when, values before and after. The project's Managers can read it; nobody can change or delete it. | [A] | High |

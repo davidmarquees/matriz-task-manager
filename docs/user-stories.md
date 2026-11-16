@@ -12,7 +12,7 @@
 | US3 | As a project member, I want to create, edit and delete tasks with a title, status and priority, so that I can manage the work. | FR5–FR7 | High |
 | US4 | As a project member, I want to assign a task to one or more members, so that it is clear who does it. | FR8 | High |
 | US5 | As a project member, I want to see a dashboard with my projects and the number of tasks in each status, so that I can track progress. | FR9 | High |
-| US6 | As a project member, I want to search tasks by text and filter them by status, priority and assignee, so that I find what I need. | FR10 | Medium |
+| US6 | As a project member, I want to search projects by name, and search tasks by text and filter them by status, priority and assignee, so that I find what I need. | FR10 | Medium |
 | US7 | As a project member, I want to comment on a task, so that I can communicate in its context. | FR11 | Medium |
 | US8 | As a Manager or Member testing the system, I want two demo accounts (Manager and Member), so that I can test the permissions. | FR12 | Medium |
 | US9 | As an Admin, I want to create an account for each new employee and assign it the Manager or Member role, so that they can access Matriz with the right permissions. | FR1a | High |
@@ -51,6 +51,7 @@
 - **Given** a project with tasks titled "Fix login" and "Write report", **When** I search for "login", **Then** only "Fix login" is listed.
 - **Given** tasks with different statuses and priorities, **When** I filter by status IN_PROGRESS and priority HIGH, **Then** only tasks matching both are listed.
 - **Given** a task assigned to me and one that is not, **When** I filter by assignee = me, **Then** only my task is listed.
+- **Given** I am a member of projects named "Website redesign" and "Annual report", **When** I search projects for "web", **Then** only "Website redesign" is listed, and never a project I am not a member of.
 
 ### US7 — Comments
 - **Given** I am a project member, **When** I add a comment to a task, **Then** it appears on the task with my name and the date.

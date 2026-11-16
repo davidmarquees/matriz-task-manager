@@ -5,7 +5,7 @@
 
 ## 1. Drivers
 
-- Small MVP scope: FR1–FR12, one company (A16), at least 50 users and 1,000 tasks (NFR2, A15).
+- Small MVP scope: FR1–FR13, one company (A16), at least 50 users and 1,000 tasks (NFR2, A15).
 - All permissions enforced on the server (NFR4); project roles drive most rules.
 - Small team, course timeline; the code is written with AI assistants in Worksheet 03.
 - Simple to run locally and to test.
@@ -28,7 +28,7 @@
 
 ### Why this option
 
-1. **Size:** the MVP has 12 functional requirements, one company (A16) and at least 50 users and 1,000 tasks (NFR2). One application handles this load without scaling out.
+1. **Size:** the MVP has 13 functional requirements (FR1–FR13), one company (A16) and at least 50 users and 1,000 tasks (NFR2). One application handles this load without scaling out.
 2. **One deployment:** one backend, one frontend build and one database to run, locally and in the course environment.
 3. **Data consistency:** one database gives local transactions for rules that touch several areas, such as deleting a project with its tasks and comments (A11) or removing a member from their tasks (E1).
 4. **Simpler security:** authorization (NFR4) is checked in one process, with no tokens passed between services.
@@ -44,13 +44,15 @@
 
 | Layer | Choice | Status | Justification |
 |---|---|---|---|
-| Backend | Java + Spring Boot (REST API) | [D] | Mature, strong support for validation (Bean Validation), security (Spring Security) and data access (Spring Data JPA); fits the team's preference. |
-| Frontend | React (single-page application) | [D] | Team preference; fits a few screens with forms, lists and filters. |
-| Database | PostgreSQL | [D] | Relational data with clear relations (projects, members, tasks, assignees, comments) and constraints (unique email, no duplicate assignees); built-in text search is enough for FR10. |
+| Backend | Java 21 + Spring Boot 3.5 (REST API), built with Maven | [D] | Mature, strong support for validation (Bean Validation), security (Spring Security) and data access (Spring Data JPA); fits the team's preference. |
+| Frontend | React 18 (single-page application) with Vite, React Router and react-i18next; API address from `VITE_API_URL` | [D] | Team preference; fits a few screens with forms, lists and filters. |
+| Database | PostgreSQL 16 | [D] | Relational data with clear relations (projects, members, tasks, assignees, comments) and constraints (unique email, no duplicate assignees); built-in text search is enough for FR10. |
 | API contract | REST + JSON, described in OpenAPI 3.1 (`openapi.yaml`) | [D] | Shared contract between frontend and backend. |
 | Authentication | Server-side session with an HttpOnly cookie (Spring Security) | [D] | Must be the simplest option. Spring Security's default session gives login, logout and the 30-minute inactivity timeout (A18) with no extra infrastructure; no tokens stored in the browser. Alternative: JWT. |
 | Password hashing | BCrypt (Spring Security) | [A] | Meets NFR3. |
-| Schema migrations | Flyway | [A] | Versioned schema. Demo accounts are seeded only in the development profile (separate Flyway location); the Admin account is created at first start from environment variables (A25). |
+| Schema migrations | Flyway | [D] | Versioned schema. Demo accounts and demo projects are seeded only in the development profile (separate Flyway location, applied once, never wiping data); the Admin account is created at first start from environment variables (A25). |
+| Tests | JUnit 5, Spring Boot Test, Testcontainers (PostgreSQL); Vitest and Testing Library in the frontend | [D] | Isolated and repeatable database for integration tests; prepares Worksheet 04. |
+| Local runtime | Docker Compose for PostgreSQL; backend and frontend run locally | [D] | Simple; configuration only through environment variables, with a `.env.example` of fictitious values. |
 
 ## 5. Components and responsibilities
 
@@ -104,8 +106,8 @@ PostgreSQL
 
 Single list of pending technical decisions (constraints.md links here).
 
-- [P] Hosting and runtime environment (e.g. Docker Compose locally).
-- [P] Testing strategy (unit, integration, end-to-end).
-- [P] SMTP provider for the reset email (local test server proposed for the course).
-- [P] Exact versions (Java, Spring Boot, React, PostgreSQL).
-- [P] How the pre-created account passwords are shared (constraints.md, section 5).
+Decided in Worksheet 03 (docs/implementation-plan.md, section 7): versions, build tools, local runtime, testing strategy, repository layout, pagination and how pre-created account passwords are provided (see section 4).
+
+- [P] Hosting beyond the local environment (Worksheet 05).
+- [P] End-to-end tests with Playwright (Worksheet 04).
+- [P] SMTP provider for the reset email (local test server proposed for the course); only for the optional increment 8.
