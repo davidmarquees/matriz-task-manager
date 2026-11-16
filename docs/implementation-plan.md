@@ -129,7 +129,7 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 | 0 | Ex. 1 | This plan, decisions, full contract, doc fixes | Done (2026-11-16) | Redocly CLI lint: valid, 0 errors, 2 accepted warnings (`localhost` server URL, intended for local development; `info-license-strict`, because a proprietary licence has no SPDX identifier or public URL); local YAML and `$ref` check: 22 operations, no missing references; commit `docs: add implementation plan, complete API contract and reconcile docs with Worksheet 03 scope` |
 | 1 | Ex. 2 | Skeleton, persistence, seed | Done (2026-11-16) | [verification.md](verification.md) V-01 to V-06; `./mvnw verify` 16 tests passed; commit pending |
 | 2 | Ex. 3 | Authentication and access rules | Done (2026-11-16) | [verification.md](verification.md) V-07 to V-14; `./mvnw verify` 34 tests passed; commit pending |
-| 3 | Ex. 4 | Projects and members | Not started | — |
+| 3 | Ex. 4 | Projects and members | Done (2026-11-16) | [verification.md](verification.md) V-15 to V-20; `./mvnw verify` 45 tests passed; commit pending |
 | 4 | Ex. 5 | Tasks, filters, dashboard counts | Not started | — |
 | 5 | Ex. 6 | Assignees and comments | Not started | — |
 | 6 | Ex. 7 | Complete frontend | Not started | — |
@@ -172,6 +172,11 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 - **Components:** projects module (service, repository, controller), members, activity-log writer (same transaction), contract; frontend project list with search, create/edit form, detail, delete confirmation, members screen.
 - **Acceptance:** US2; D9–D19 (Admin parts limited to read and appoint Manager); search by name; cascade delete (A11); **first increment demo:** log in, create a project, see it in the list, still there after reload and backend restart.
 - **Checks:** integration tests for CRUD, search, pagination, 404 for non-member, 403 for Member, last-Manager rule; manual demo above.
+- **As implemented (2026-11-16, approved by David):**
+  - Backend: `ProjectService` (list with name search and pagination, create, read, update with version, delete with cascade), `MemberService` (list, add by email, change role, remove; last-Manager rule with a row lock), `ProjectAccess` (member, Manager, reader and lock checks), `ActivityLog` and `UserAuditLog` writers (both logs for membership changes), `TaskCounts` (tasks module, counts per status for the projects module), `PatchBody` and `TextInput` (contract rules for partial updates and text fields), strict JSON types (a number for a text field → 422).
+  - The Admin account sees every project and its members (without task counts) and gets 403 on changes; appointing a Manager stays in the optional increment 8.
+  - Frontend: Projects page (search, pagination, loading / empty / error states, create form for Manager accounts) and project detail (counts, edit with version conflict message, delete and member removal with confirmation, add member by email, change role), navigation in the header; login returns to the page that asked for it.
+  - Bug found and fixed during the browser check: logging in again right after logging out failed (403), because logout removed the CSRF cookie; logout now sends a new token. Regression test in `SessionCookiesTest`.
 
 ### Increment 4 — Tasks (Ex. 5)
 - **Components:** tasks module (list with filters and pagination, delete), dashboard endpoint; frontend task list in the project detail, filters, create form with field errors, translated labels.

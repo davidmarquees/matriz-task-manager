@@ -5,6 +5,8 @@ import { AppHeader } from './components/AppHeader';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
+import { ProjectDetailPage } from './pages/ProjectDetailPage';
+import { ProjectsPage } from './pages/ProjectsPage';
 
 export function App() {
   return (
@@ -27,6 +29,24 @@ export function App() {
               <RequireAuth>
                 <AppHeader />
                 <HomePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              <RequireAuth>
+                <AppHeader />
+                <ProjectsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId"
+            element={
+              <RequireAuth>
+                <AppHeader />
+                <ProjectDetailPage />
               </RequireAuth>
             }
           />

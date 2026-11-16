@@ -81,6 +81,17 @@ class SessionCookiesTest {
         ResponseEntity<String> after = http.exchange("/auth/me", HttpMethod.GET, new HttpEntity<>(sessionHeaders),
                 String.class);
         assertThat(after.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        // 5. The logout answer carries a new CSRF token, so logging in again from the same page works
+        String afterLogoutToken = value(cookie(logout, "XSRF-TOKEN"));
+        assertThat(afterLogoutToken).isNotBlank();
+        HttpHeaders again = new HttpHeaders();
+        again.setContentType(MediaType.APPLICATION_JSON);
+        again.add(HttpHeaders.COOKIE, "XSRF-TOKEN=" + afterLogoutToken);
+        again.add("X-XSRF-TOKEN", afterLogoutToken);
+        ResponseEntity<String> secondLogin = http.exchange("/auth/login", HttpMethod.POST, new HttpEntity<>(
+                "{\"email\":\"manager@example.test\",\"password\":\"test-demo-password\"}", again), String.class);
+        assertThat(secondLogin.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     private static String cookie(ResponseEntity<?> response, String name) {

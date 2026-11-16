@@ -158,7 +158,7 @@ class AuthFlowTest {
 
         changePassword(session, "initial-password", "a-brand-new-password").andExpect(status().isNoContent());
 
-        mvc.perform(get("/projects").session(session)).andExpect(status().isNotFound()); // no longer 403
+        mvc.perform(get("/projects").session(session)).andExpect(status().isOk()); // no longer 403
         assertThat(jdbc.queryForObject("SELECT must_change_password FROM users WHERE email = ?", Boolean.class, email))
                 .isFalse();
     }

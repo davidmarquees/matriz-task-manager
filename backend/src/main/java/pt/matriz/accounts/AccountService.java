@@ -3,7 +3,11 @@ package pt.matriz.accounts;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -67,6 +71,20 @@ public class AccountService {
         }
         user.registerSuccessfulLogin();
         return Optional.of(AccountView.of(user));
+    }
+
+    /** Account with this email (ignoring case), if any. */
+    @Transactional(readOnly = true)
+    public Optional<AccountView> findByEmail(String email) {
+        return users.findByEmailIgnoreCase(email.trim()).map(AccountView::of);
+    }
+
+    /** Public summaries (id, name, active) of these accounts, by id. */
+    @Transactional(readOnly = true)
+    public Map<Long, UserSummary> summaries(Collection<Long> userIds) {
+        return users.findAllById(userIds).stream()
+                .map(UserSummary::of)
+                .collect(Collectors.toMap(UserSummary::id, Function.identity()));
     }
 
     /** Current state of an account, read on every request (D8, D45). */

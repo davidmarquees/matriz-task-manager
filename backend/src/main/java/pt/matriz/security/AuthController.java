@@ -95,6 +95,8 @@ class AuthController {
         contextLogout.logout(request, response, authentication);
         new CsrfLogoutHandler(csrfTokens).logout(request, response, authentication);
         new CookieClearingLogoutHandler("JSESSIONID").logout(request, response, authentication);
+        // A fresh CSRF token, so the next login from the same page works without reloading it.
+        csrfTokens.saveToken(csrfTokens.generateToken(request), request, response);
         return ResponseEntity.noContent().build();
     }
 

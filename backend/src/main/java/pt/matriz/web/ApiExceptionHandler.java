@@ -42,6 +42,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return response.body(detail);
     }
 
+    @ExceptionHandler(PatchBody.ApiException400.class)
+    ResponseEntity<ProblemDetail> handleMalformedPatch(PatchBody.ApiException400 ex) {
+        return problem(Problems.of(HttpStatus.BAD_REQUEST));
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> handleUnexpected(Exception ex) {
         // Details only in the server log; the client gets a generic message (D28).

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { accountRoleLabel } from '../labels';
 
@@ -25,6 +25,14 @@ export function AppHeader() {
   return (
     <header className="app-header">
       <strong>Matriz</strong>
+      <nav className="app-nav">
+        <Link to="/" data-testid="nav-home">
+          Painel
+        </Link>
+        <Link to="/projects" data-testid="nav-projects">
+          Projetos
+        </Link>
+      </nav>
       <span className="app-header-user">
         <span data-testid="current-user-name">{state.user.name}</span>
         {' · '}

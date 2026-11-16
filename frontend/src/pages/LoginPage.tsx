@@ -16,11 +16,12 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
+  // After login, go back to the page that asked for it (e.g. /projects), or to the home page.
+  const from = (location.state as { from?: string } | null)?.from ?? '/';
   if (state.status === 'authenticated') {
-    return <Navigate to="/" replace />;
+    return <Navigate to={from} replace />;
   }
   const sessionExpired = state.status === 'anonymous' && state.sessionExpired;
-  const from = (location.state as { from?: string } | null)?.from ?? '/';
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
