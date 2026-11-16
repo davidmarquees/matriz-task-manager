@@ -57,3 +57,16 @@ Not checked in this increment: the 30-minute inactivity timeout (deferred, see d
 
 Not checked in this increment: two Managers demoting each other at the same instant (the row lock is in place but there is no concurrent test); the layout at 360 px (Ex. 7).
 
+## Increment 4 — Tasks (Ex. 5) and the "last change" extra, 2026-11-16
+
+| # | Scenario | Type | Expected | Observed | Evidence |
+|---|---|---|---|---|---|
+| V-21 | Backend build and tests | Auto | All tests pass | 54 tests, 0 failures, `BUILD SUCCESS` | `cd backend && ./mvnw verify` (new: `TasksApiTest` 9) |
+| V-22 | Create and read back; persistence (US3, A5) | Auto + Manual | A member creates a task with defaults TODO / MEDIUM, the creator from the session; it is listed at once and survives a backend restart | API as expected. Browser: "Rever os textos legais" created ("Tarefa … criada."), "A fazer" went from 2 to 3 without reloading; after restarting the backend (and logging in again) the task and its changes were still there | `TasksApiTest.memberCreatesATaskWithDefaultsThatIsSavedAndReadBack`; browser |
+| V-23 | Validation (D20, E5, E7) | Auto + Manual | Title only of spaces → `BLANK`; under 3 → `TOO_SHORT`; over 150 → `TOO_LONG`; missing → `REQUIRED`; description over 2,000 → 422; invalid status / priority → `INVALID_VALUE`; invalid date → `INVALID_DATE`; duplicate or non-member assignee → 422; unknown field → 400; nothing saved | As expected; browser shows "O título é obrigatório e não pode ter só espaços." and keeps the form | `TasksApiTest.refusesInvalidTaskData`, `assigneesMustBeActiveProjectMembers`; browser |
+| V-24 | Status, priority, filters and counts (US5, US6, E2, E3) | Auto + Manual | Any member edits (A13); stale version → 409; no real change → same version (D43); `projectId` in PATCH → 400 (D27); text search in title and description; filters combined with AND; assignee filter; empty result → "Nenhuma tarefa encontrada."; counts and dashboard follow every change | As expected. Browser: changing the status in the row moved the counts (A fazer 3 → 2, Em curso 1 → 2) without reloading; filter Em curso + Alta → 2 tasks | `TasksApiTest` (3 tests); browser |
+| V-25 | Delete and access (A10, D11, D17, D23, D26) | Auto + Manual | Member cannot delete a task they did not create (403); creator and Manager can; outsider gets 404 on every task operation, also by changing ids; Admin gets 403; deleted task → 404 and its title stays in the activity log | As expected. Browser: Manager deleted the task with confirmation → back to the project, counts updated ("4 tarefas"), `/tasks/7` → "Tarefa não encontrada." | `TasksApiTest` (2 tests); browser (confirmation accepted automatically in the test browser) |
+| V-26 | Extra: "last change" note, option A | Auto + Manual | Every member sees the date; only Managers see who and what; description values not repeated | API as expected. Browser: the Member saw "Alterada hoje" as plain text; the Manager, on hover, saw "Membro Demo · 16/11/2026 15:08 · Estado: A fazer → Em curso" | `TasksApiTest.lastChangeShowsWhoAndWhatOnlyToManagers`; browser screenshot check |
+
+Not checked in this increment: the delete button hidden for a Member on someone else's task (checked only in the API, 403); the note on a touch screen; the layout at 360 px (Ex. 7).
+

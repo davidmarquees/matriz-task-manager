@@ -130,7 +130,7 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 | 1 | Ex. 2 | Skeleton, persistence, seed | Done (2026-11-16) | [verification.md](verification.md) V-01 to V-06; `./mvnw verify` 16 tests passed; commit pending |
 | 2 | Ex. 3 | Authentication and access rules | Done (2026-11-16) | [verification.md](verification.md) V-07 to V-14; `./mvnw verify` 34 tests passed; commit pending |
 | 3 | Ex. 4 | Projects and members | Done (2026-11-16) | [verification.md](verification.md) V-15 to V-20; `./mvnw verify` 45 tests passed; commit pending |
-| 4 | Ex. 5 | Tasks, filters, dashboard counts | Not started | — |
+| 4 | Ex. 5 | Tasks, filters, dashboard counts (+ extra "last change") | Done (2026-11-16) | [verification.md](verification.md) V-21 to V-26; `./mvnw verify` 54 tests passed; commit pending |
 | 5 | Ex. 6 | Assignees and comments | Not started | — |
 | 6 | Ex. 7 | Complete frontend | Not started | — |
 | 7 | Ex. 8 | Verification, tests, bug fixes | Not started | — |
@@ -182,6 +182,10 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 - **Components:** tasks module (list with filters and pagination, delete), dashboard endpoint; frontend task list in the project detail, filters, create form with field errors, translated labels.
 - **Acceptance:** US3, US5, US6 (status and priority filters, text search); D20, D23–D27; lists and counts refresh without reload.
 - **Checks:** integration tests for validation (only spaces, length), defaults, delete rule, filters, counts; manual check of refresh.
+- **As implemented (2026-11-16, approved by David):**
+  - Backend: `TaskService` and `TaskController` (list with text search, status, priority and assignee filters and pagination, newest first; create; read; PATCH with version; delete by a project Manager or the creator), `assigneeIds` rules on create and update (active members only, no duplicates), activity entries for tasks and assignees, `getDashboard` (projects of the user with counts and totals; Admin 403). The Admin account gets 403 on tasks (D11).
+  - **Extra feature (David's request, outside the Worksheet): "last change" note.** Contract 0.4.0: `Task.lastChange` from the activity log. Option A approved: every member sees "Alterada hoje / ontem / a dd/mm/aaaa" (or "Criada …"); only project Managers get who changed it and what (A23 and D41 unchanged). Description and assignee values are not repeated in the note. Shown on hover, keyboard focus and tap.
+  - Frontend: tasks section in the project page (search, filters, pagination, create form, quick status and priority change per row, counts refreshed without reloading), task page (fields, edit with version-conflict message, delete with confirmation only for Managers or the creator), `LastChangeNote` component. The assignee picker is in Ex. 6; the dashboard screen in Ex. 7.
 
 ### Increment 5 — Assignees and comments (Ex. 6)
 - **Components:** assignee add/remove, eligible users from members; comments module; frontend assignee selector and comment list on the task detail.

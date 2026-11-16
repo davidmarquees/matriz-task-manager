@@ -7,6 +7,7 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { ProjectsPage } from './pages/ProjectsPage';
+import { TaskDetailPage } from './pages/TaskDetailPage';
 
 export function App() {
   return (
@@ -47,6 +48,15 @@ export function App() {
               <RequireAuth>
                 <AppHeader />
                 <ProjectDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/tasks/:taskId"
+            element={
+              <RequireAuth>
+                <AppHeader />
+                <TaskDetailPage />
               </RequireAuth>
             }
           />

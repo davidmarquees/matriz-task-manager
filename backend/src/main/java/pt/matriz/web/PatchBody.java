@@ -54,6 +54,11 @@ public final class PatchBody {
         return body.has(field);
     }
 
+    /** Raw JSON value of a field (null when absent). */
+    public JsonNode node(String field) {
+        return body.get(field);
+    }
+
     /** Text value of a present field; null when sent as null; 422 INVALID_VALUE for another type. */
     public String text(String field) {
         JsonNode value = body.get(field);

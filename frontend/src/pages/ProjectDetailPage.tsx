@@ -17,6 +17,7 @@ import {
 } from '../api/projects';
 import { useAuth } from '../auth/AuthContext';
 import { TaskCountsLine } from '../components/TaskCountsLine';
+import { TasksSection } from '../components/TasksSection';
 import { projectRoleLabel, userLabel } from '../labels';
 
 type Load =
@@ -32,6 +33,16 @@ export function ProjectDetailPage() {
   const { state } = useAuth();
   const currentUserId = state.status === 'authenticated' ? state.user.id : null;
   const [load, setLoad] = useState<Load>({ status: 'loading' });
+
+  // After a task change: refresh the project (counts) without touching the rest of the page.
+  const refreshCounts = useCallback(async () => {
+    try {
+      const project = await getProject(id);
+      setLoad((current) => (current.status === 'ready' ? { ...current, project } : current));
+    } catch {
+      // the next full reload shows the error
+    }
+  }, [id]);
 
   const reload = useCallback(async () => {
     try {
@@ -97,6 +108,8 @@ export function ProjectDetailPage() {
           onDeleted={() => navigate('/projects', { replace: true })}
         />
       )}
+
+      <TasksSection projectId={project.id} onTasksChanged={() => void refreshCounts()} />
 
       <MembersSection
         projectId={project.id}

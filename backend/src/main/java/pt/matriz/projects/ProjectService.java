@@ -95,6 +95,22 @@ public class ProjectService {
         return new ProjectPage(items, page, size, total);
     }
 
+    /** Every project of the user, sorted by name, with counts (dashboard, FR9); not paginated (NFR2 scale). */
+    @Transactional(readOnly = true)
+    public List<ProjectSummary> allOfMember(AuthenticatedUser user) {
+        List<ProjectSummary> items = jdbc.query(
+                "SELECT p.id, p.name, p.description, m.project_role, "
+                        + "(SELECT count(*) FROM project_members x WHERE x.project_id = p.id) AS member_count "
+                        + "FROM projects p JOIN project_members m ON m.project_id = p.id AND m.user_id = ? "
+                        + "ORDER BY lower(p.name), p.id",
+                (rs, i) -> new ProjectSummary(rs.getLong("id"), rs.getString("name"), rs.getString("description"),
+                        role(rs), rs.getLong("member_count"), null),
+                user.id());
+        Map<Long, TaskCounts.Counts> counts = taskCounts.byProject(items.stream().map(ProjectSummary::id).toList());
+        return items.stream().map(p -> new ProjectSummary(p.id(), p.name(), p.description(), p.myRole(),
+                p.memberCount(), counts.get(p.id()))).toList();
+    }
+
     /** Only Manager accounts create projects; the creator becomes the first Manager (FR2, A1, A12, D9). */
     @Transactional
     public Project create(AuthenticatedUser user, String name, String description) {

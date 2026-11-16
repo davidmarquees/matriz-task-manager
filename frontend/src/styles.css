@@ -168,3 +168,96 @@ select {
   font: inherit;
   padding: 0.5rem;
 }
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.task-form {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.task-list {
+  list-style: none;
+  padding: 0;
+}
+
+.task-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.task-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 14rem;
+}
+
+.compact select {
+  padding: 0.3rem;
+}
+
+.task-fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+}
+
+.task-fields dd {
+  margin: 0;
+}
+
+.description {
+  white-space: pre-wrap;
+}
+
+.last-change {
+  position: relative;
+  font-size: 0.85rem;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  text-decoration: underline dotted;
+  cursor: help;
+  font-size: inherit;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  top: 1.5rem;
+  min-width: 16rem;
+  max-width: 22rem;
+  padding: 0.5rem 0.75rem;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.tooltip ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

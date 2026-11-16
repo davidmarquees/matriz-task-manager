@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Matriz API
-  version: 0.3.0
+  version: 0.4.0
   license:
     name: Proprietary
   summary: REST API of Matriz, a project and task management application (MVP).
@@ -1303,6 +1303,42 @@ components:
         version:
           type: integer
           description: Used for optimistic locking when the task is updated (D25).
+        lastChange:
+          description: |
+            Last change to the task after its creation, from the project activity log; null when the task
+            was never changed (the interface then shows the creation date). Extra feature approved on
+            2026-11-16, option A: every member sees the date; `changedBy` and `changes` are sent only to the
+            project's Managers, who are the only ones allowed to read the activity log (A23, D41).
+          oneOf:
+            - $ref: '#/components/schemas/TaskLastChange'
+            - type: 'null'
+
+    TaskLastChange:
+      type: object
+      required: [changedAt]
+      properties:
+        changedAt:
+          type: string
+          format: date-time
+        changedBy:
+          description: Only for project Managers. Name null when the account was anonymised ("Removed user").
+          $ref: '#/components/schemas/UserSummary'
+        changes:
+          type: array
+          description: Only for project Managers. Fields changed in that change.
+          items:
+            type: object
+            required: [field]
+            properties:
+              field:
+                type: string
+                enum: [title, description, status, priority, dueDate, assignees]
+              old:
+                type: [string, 'null']
+                description: Value before; always null for `description` and `assignees` (not repeated here).
+              new:
+                type: [string, 'null']
+                description: Value after; always null for `description` and `assignees`.
 
     TaskPage:
       allOf:
