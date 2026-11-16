@@ -132,7 +132,7 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 | 3 | Ex. 4 | Projects and members | Done (2026-11-16) | [verification.md](verification.md) V-15 to V-20; `./mvnw verify` 45 tests passed; commit pending |
 | 4 | Ex. 5 | Tasks, filters, dashboard counts (+ extra "last change") | Done (2026-11-16) | [verification.md](verification.md) V-21 to V-26; `./mvnw verify` 54 tests passed; commit pending |
 | 5 | Ex. 6 | Assignees and comments | Done (2026-11-16) | [verification.md](verification.md) V-27 to V-31; `./mvnw verify` 60 tests passed; commit pending |
-| 6 | Ex. 7 | Complete frontend | Not started | — |
+| 6 | Ex. 7 | Complete frontend | Done (2026-11-16) | [verification.md](verification.md) V-32 to V-38; `./mvnw verify` 61 tests, `npm test` 11 tests passed; commit pending |
 | 7 | Ex. 8 | Verification, tests, bug fixes | Not started | — |
 | 8 | optional | Documented features outside the Worksheet (P9) | Not started | — |
 | 9 | Ex. 9 | Review, documentation, delivery | Not started | — |
@@ -200,6 +200,12 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 - **Components:** dashboard as in the wireframe, all screens of Ex. 7, shared form and message components, loading/empty/success/error states, no double submit, form data kept on error, responsive layout (360 px), light/dark/system theme, PT/EN, `data-testid`.
 - **Acceptance:** full MVP usable in the interface; no mocks left; totals over the full data set.
 - **Checks:** Vitest component tests for the main forms; manual run of each screen at desktop and 360 px.
+- **As implemented (2026-11-16, approved by David):**
+  - Design approved in the design canvas (two rounds of feedback): solid greige background `#E3DED6` with a light-stone board `#F2F0EC`, bento cards with large radii, big-number totals with ↗ buttons, earthy palette (brick `#A8432F` for the main action, pine `#20483A` for done, ochre for in progress, hatching for to do), Anton for page titles and big numbers, Inter for text, IBM Plex Mono for dates and labels; dark theme unchanged from the proposal. Every text pair meets WCAG AA.
+  - Dependencies: `i18next`, `react-i18next`, `lucide-react`, `@fontsource/anton`, `@fontsource-variable/inter`, `@fontsource/ibm-plex-mono` (fonts bundled, no external requests); `vitest` 5.1.0 (3.x had critical advisories), `@testing-library/react`, `@testing-library/jest-dom`, `jsdom`. `npm audit`: 0 vulnerabilities.
+  - Contract 0.5.0: `PATCH /auth/me/preferences` (language and theme saved in the profile, NFR1, NFR8; audited as PREFERENCES_CHANGED; allowed while a password change is required).
+  - Frontend: design tokens with light, dark and auto themes; PT/EN translation files for every text (before login the browser language and system theme, A24); app shell with sidebar (desktop) and ☰ menu (mobile); new dashboard from `getDashboard` (totals, projects with progress bars, overall progress gauge, shortcuts, empty state, Admin message); login, password change, projects, project and task pages restyled; accessible confirmation dialog (focus on the safe choice, Escape, focus trap) instead of `window.confirm`; toasts for success; skeletons, empty and error states everywhere.
+  - Kept every earlier `data-testid` except `project-create-success` and `task-create-success` (success now shown as a toast, `toast`); added `menu-button`, `language-*`, `theme-*`, `dashboard-*`, `confirm-*`, `project-create-open`, `task-create-open`.
 
 ### Increment 7 — Verification (Ex. 8)
 - Scenarios 01–09 of the Worksheet in `docs/verification.md`; at least three automated tests (validation rule, authorisation, create then read from the database) already exist from increments 2–5; bugs reproduced, fixed in a limited change, with a regression test.

@@ -105,6 +105,15 @@ class AuthController {
         return accounts.find(user.id()).map(CurrentUserResponse::of).orElseThrow(ApiException::notFound);
     }
 
+    record PreferencesRequest(String locale, String theme) {
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/me/preferences")
+    CurrentUserResponse updatePreferences(@RequestBody PreferencesRequest body,
+                                          @AuthenticationPrincipal AuthenticatedUser user) {
+        return CurrentUserResponse.of(accounts.updatePreferences(user.id(), body.locale(), body.theme()));
+    }
+
     @PostMapping("/password")
     ResponseEntity<Void> changeOwnPassword(@Valid @RequestBody PasswordChangeRequest body,
                                            @AuthenticationPrincipal AuthenticatedUser user,

@@ -1,68 +1,43 @@
+import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
-import { AppHeader } from './components/AppHeader';
+import { AppShell } from './components/AppShell';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
-import { HomePage } from './pages/HomePage';
+import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { TaskDetailPage } from './pages/TaskDetailPage';
+import { PreferencesProvider } from './prefs/PreferencesContext';
+import { FeedbackProvider } from './ui/Feedback';
+
+function Protected({ children }: { children: ReactNode }) {
+  return (
+    <RequireAuth>
+      <AppShell>{children}</AppShell>
+    </RequireAuth>
+  );
+}
 
 export function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/change-password"
-            element={
-              <RequireAuth>
-                <AppHeader />
-                <ChangePasswordPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/"
-            element={
-              <RequireAuth>
-                <AppHeader />
-                <HomePage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/projects"
-            element={
-              <RequireAuth>
-                <AppHeader />
-                <ProjectsPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/projects/:projectId"
-            element={
-              <RequireAuth>
-                <AppHeader />
-                <ProjectDetailPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/tasks/:taskId"
-            element={
-              <RequireAuth>
-                <AppHeader />
-                <TaskDetailPage />
-              </RequireAuth>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <PreferencesProvider>
+        <FeedbackProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/" element={<Protected><DashboardPage /></Protected>} />
+              <Route path="/change-password" element={<Protected><ChangePasswordPage /></Protected>} />
+              <Route path="/projects" element={<Protected><ProjectsPage /></Protected>} />
+              <Route path="/projects/:projectId" element={<Protected><ProjectDetailPage /></Protected>} />
+              <Route path="/tasks/:taskId" element={<Protected><TaskDetailPage /></Protected>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </FeedbackProvider>
+      </PreferencesProvider>
     </AuthProvider>
   );
 }

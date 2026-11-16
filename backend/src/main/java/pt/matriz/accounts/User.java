@@ -118,6 +118,11 @@ public class User {
         lockedUntil = null;
     }
 
+    void changePreferences(String newLocale, String newTheme) {
+        locale = newLocale;
+        theme = newTheme;
+    }
+
     void changePassword(String newHash) {
         passwordHash = newHash;
         mustChangePassword = false;

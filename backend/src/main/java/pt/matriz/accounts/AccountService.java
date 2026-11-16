@@ -118,6 +118,33 @@ public class AccountService {
         audit.record(userId, userId, "PASSWORD_CHANGED");
     }
 
+    /**
+     * Saves the interface language and theme (NFR1, NFR8). Unknown values → 422 INVALID_VALUE; nothing
+     * sent → 422 REQUIRED. Written to the user audit log when something changed (PREFERENCES_CHANGED).
+     */
+    @Transactional
+    public AccountView updatePreferences(long userId, String locale, String theme) {
+        if (locale == null && theme == null) {
+            throw ApiException.invalid("body", "REQUIRED");
+        }
+        if (locale != null && !java.util.Set.of("pt-PT", "en").contains(locale)) {
+            throw ApiException.invalid("locale", "INVALID_VALUE");
+        }
+        if (theme != null && !java.util.Set.of("LIGHT", "DARK", "SYSTEM").contains(theme)) {
+            throw ApiException.invalid("theme", "INVALID_VALUE");
+        }
+        User user = users.findById(userId).orElseThrow(ApiException::notFound);
+        String newLocale = locale == null ? user.getLocale() : locale;
+        String newTheme = theme == null ? user.getTheme() : theme;
+        if (!newLocale.equals(user.getLocale()) || !newTheme.equals(user.getTheme())) {
+            java.util.Map<String, Object> before = java.util.Map.of("locale", user.getLocale(), "theme", user.getTheme());
+            java.util.Map<String, Object> after = java.util.Map.of("locale", newLocale, "theme", newTheme);
+            user.changePreferences(newLocale, newTheme);
+            audit.record(userId, userId, "PREFERENCES_CHANGED", null, null, before, after);
+        }
+        return AccountView.of(user);
+    }
+
     private void registerFailure(User user, OffsetDateTime now) {
         if (user.registerFailedAttempt(maxFailedAttempts, now.plus(lockDuration))) {
             audit.record(null, user.getId(), "ACCOUNT_LOCKED");

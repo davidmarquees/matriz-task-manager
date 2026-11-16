@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { ClipboardList, Plus, Search, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import type { TFunction } from 'i18next';
 import { ApiError } from '../api/client';
 import {
   createTask,
@@ -15,7 +18,9 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from '../api/tasks';
-import { formatDate, taskPriorityLabel, taskStatusLabel, userLabel } from '../labels';
+import { formatDate, userLabel } from '../labels';
+import { Alert, EmptyState, PriorityPill, Skeleton } from '../ui/Bits';
+import { useFeedback } from '../ui/Feedback';
 import { LastChangeNote } from './LastChangeNote';
 
 const STATUSES: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE'];
@@ -23,34 +28,37 @@ const PRIORITIES: TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH'];
 
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: TaskPage };
 
-/** Message for a 422 on a task form, by field and code (D20). */
-export function taskErrorMessage(e: unknown): string | null {
-  if (!(e instanceof ApiError)) return 'Não foi possível guardar a tarefa. Tente novamente.';
+/** Message for an error on a task form, by status and field (D20, D25, D26). Null when the session ended. */
+export function taskErrorMessage(t: TFunction, e: unknown): string | null {
+  if (!(e instanceof ApiError)) return t('tasks.saveError');
   if (e.status === 401) return null;
-  if (e.status === 409) return 'A tarefa foi alterada por outro utilizador. Recarregue e tente novamente.';
-  if (e.status === 404) return 'A tarefa ou o projeto já não existe.';
+  if (e.status === 409) return t('tasks.conflict');
+  if (e.status === 404) return t('tasks.gone');
   const title = e.fieldCode('title');
-  if (title === 'BLANK' || title === 'REQUIRED') return 'O título é obrigatório e não pode ter só espaços.';
-  if (title === 'TOO_SHORT') return `O título tem de ter pelo menos ${TASK_TITLE_MIN} caracteres.`;
-  if (title === 'TOO_LONG') return `O título pode ter no máximo ${TASK_TITLE_MAX} caracteres.`;
-  if (e.fieldCode('description')) return `A descrição pode ter no máximo ${TASK_DESCRIPTION_MAX} caracteres.`;
-  if (e.fieldCode('dueDate')) return 'A data limite não é válida.';
-  if (e.fieldCode('status') || e.fieldCode('priority')) return 'Estado ou prioridade inválidos.';
-  return 'Não foi possível guardar a tarefa. Tente novamente.';
+  if (title === 'BLANK' || title === 'REQUIRED') return t('tasks.titleRequired');
+  if (title === 'TOO_SHORT') return t('tasks.titleTooShort', { min: TASK_TITLE_MIN });
+  if (title === 'TOO_LONG') return t('tasks.titleTooLong', { max: TASK_TITLE_MAX });
+  if (e.fieldCode('description')) return t('tasks.descriptionTooLong', { max: TASK_DESCRIPTION_MAX });
+  if (e.fieldCode('dueDate')) return t('tasks.invalidDate');
+  if (e.fieldCode('status') || e.fieldCode('priority')) return t('tasks.invalidValue');
+  return t('tasks.saveError');
 }
 
 /**
- * Tasks of a project (Worksheet 03, Ex. 5): search, filters by status and priority, pagination,
- * creation, and quick status / priority changes. After every change the list and the project counts
- * are refreshed without reloading the page.
+ * Tasks of a project (Ex. 5): search, filters by status and priority, pagination, creation and quick
+ * status / priority changes. After every change the list and the project counts are refreshed without
+ * reloading the page.
  */
 export function TasksSection({ projectId, onTasksChanged }: { projectId: number; onTasksChanged: () => void }) {
+  const { t, i18n } = useTranslation();
+  const { toast } = useFeedback();
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<TaskFilters>({ q: '', status: '', priority: '' });
   const [page, setPage] = useState(0);
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [rowError, setRowError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -84,9 +92,10 @@ export function TasksSection({ projectId, onTasksChanged }: { projectId: number;
     setRowError(null);
     try {
       await updateTask(task.id, task.version, change);
+      toast(t('tasks.updated'));
       changed();
     } catch (e) {
-      setRowError(taskErrorMessage(e));
+      setRowError(taskErrorMessage(t, e));
       void reload();
     } finally {
       setSavingId(null);
@@ -97,23 +106,47 @@ export function TasksSection({ projectId, onTasksChanged }: { projectId: number;
   const totalPages = load.status === 'ready' ? Math.max(1, Math.ceil(load.data.totalItems / TASK_PAGE_SIZE)) : 1;
 
   return (
-    <section className="panel" data-testid="tasks-section">
-      <h2>Tarefas</h2>
-      <CreateTaskForm projectId={projectId} onCreated={() => (page === 0 ? changed() : (setPage(0), onTasksChanged()))} />
+    <section className="tile" aria-labelledby="tasks-title" data-testid="tasks-section">
+      <div className="row-between">
+        <h2 id="tasks-title">{t('tasks.title')}</h2>
+        {!creating && (
+          <button type="button" className="btn btn-primary btn-small" onClick={() => setCreating(true)} data-testid="task-create-open">
+            <Plus size={16} aria-hidden="true" />
+            {t('tasks.newTask')}
+          </button>
+        )}
+      </div>
 
-      <div className="filters">
-        <label>
-          Pesquisar
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            maxLength={TASK_TITLE_MAX}
-            data-testid="task-search"
-          />
+      {creating && (
+        <CreateTaskForm
+          projectId={projectId}
+          onClose={() => setCreating(false)}
+          onCreated={() => {
+            if (page === 0) changed();
+            else {
+              setPage(0);
+              onTasksChanged();
+            }
+          }}
+        />
+      )}
+
+      <div className="field-row">
+        <label className="field">
+          {t('tasks.search')}
+          <span style={{ position: 'relative', display: 'block' }}>
+            <Search size={18} aria-hidden="true" className="search-icon" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              maxLength={TASK_TITLE_MAX}
+              data-testid="task-search"
+            />
+          </span>
         </label>
-        <label>
-          Estado
+        <label className="field">
+          {t('tasks.status')}
           <select
             value={filters.status}
             onChange={(e) => {
@@ -122,16 +155,16 @@ export function TasksSection({ projectId, onTasksChanged }: { projectId: number;
             }}
             data-testid="task-filter-status"
           >
-            <option value="">Todos</option>
+            <option value="">{t('tasks.allStatuses')}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {taskStatusLabel[s]}
+                {t(`status.${s}`)}
               </option>
             ))}
           </select>
         </label>
-        <label>
-          Prioridade
+        <label className="field">
+          {t('tasks.priority')}
           <select
             value={filters.priority}
             onChange={(e) => {
@@ -140,10 +173,10 @@ export function TasksSection({ projectId, onTasksChanged }: { projectId: number;
             }}
             data-testid="task-filter-priority"
           >
-            <option value="">Todas</option>
+            <option value="">{t('tasks.allPriorities')}</option>
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
-                {taskPriorityLabel[p]}
+                {t(`priority.${p}`)}
               </option>
             ))}
           </select>
@@ -151,43 +184,47 @@ export function TasksSection({ projectId, onTasksChanged }: { projectId: number;
       </div>
 
       {rowError && (
-        <p role="alert" className="error" data-testid="task-row-error">
+        <Alert kind="error" testId="task-row-error">
           {rowError}
-        </p>
+        </Alert>
       )}
-      {load.status === 'loading' && <p data-testid="tasks-loading">A carregar…</p>}
+      {load.status === 'loading' && <Skeleton rows={3} label={t('common.loading')} testId="tasks-loading" />}
       {load.status === 'error' && (
-        <p role="alert" className="error" data-testid="tasks-error">
-          Não foi possível carregar as tarefas.{' '}
-          <button type="button" onClick={() => void reload()}>
-            Tentar novamente
+        <Alert kind="error" testId="tasks-error">
+          {t('tasks.loadError')}{' '}
+          <button type="button" className="link-button" onClick={() => void reload()}>
+            {t('common.retry')}
           </button>
-        </p>
+        </Alert>
       )}
       {load.status === 'ready' && load.data.items.length === 0 && (
-        <p data-testid="tasks-empty">{filtered ? 'Nenhuma tarefa encontrada.' : 'Este projeto ainda não tem tarefas.'}</p>
+        <EmptyState icon={ClipboardList} title={filtered ? t('tasks.noResults') : t('tasks.none')} testId="tasks-empty" />
       )}
       {load.status === 'ready' && load.data.items.length > 0 && (
         <>
-          <p className="muted" data-testid="tasks-total">
-            {load.data.totalItems} {load.data.totalItems === 1 ? 'tarefa' : 'tarefas'}
+          <p className="eyebrow" data-testid="tasks-total">
+            {t('tasks.total', { count: load.data.totalItems })}
           </p>
-          <ul className="task-list" data-testid="task-list">
+          <ul className="list" data-testid="task-list">
             {load.data.items.map((task) => (
-              <li key={task.id} data-testid="task-item">
-                <div className="task-main">
-                  <Link to={`/tasks/${task.id}`} data-testid="task-link">
+              <li key={task.id} className="task-row" data-testid="task-item">
+                <div className="stack" style={{ gap: 6 }}>
+                  <Link className="task-title" to={`/tasks/${task.id}`} data-testid="task-link">
                     {task.title}
                   </Link>
-                  <span className="muted">
-                    {task.dueDate && <>Data limite: {formatDate(task.dueDate)} · </>}
-                    {task.assignees.length > 0 ? task.assignees.map(userLabel).join(', ') : 'Sem responsáveis'}
+                  <span className="row" style={{ gap: 8 }}>
+                    <PriorityPill priority={task.priority} />
+                    <span className="muted" style={{ fontSize: 13 }}>
+                      {task.dueDate && <>{t('tasks.dueOn', { date: formatDate(task.dueDate, i18n.language) })} · </>}
+                      {task.assignees.length > 0 ? task.assignees.map((a) => userLabel(t, a)).join(', ') : t('tasks.noAssignees')}
+                    </span>
                   </span>
                   <LastChangeNote task={task} />
                 </div>
-                <label className="compact">
-                  <span className="visually-hidden">Estado de {task.title}</span>
+                <label>
+                  <span className="visually-hidden">{t('tasks.statusOf', { title: task.title })}</span>
                   <select
+                    className="select-compact"
                     value={task.status}
                     disabled={savingId !== null}
                     onChange={(e) => void quickChange(task, { status: e.target.value as TaskStatus })}
@@ -195,14 +232,15 @@ export function TasksSection({ projectId, onTasksChanged }: { projectId: number;
                   >
                     {STATUSES.map((s) => (
                       <option key={s} value={s}>
-                        {taskStatusLabel[s]}
+                        {t(`status.${s}`)}
                       </option>
                     ))}
                   </select>
                 </label>
-                <label className="compact">
-                  <span className="visually-hidden">Prioridade de {task.title}</span>
+                <label>
+                  <span className="visually-hidden">{t('tasks.priorityOf', { title: task.title })}</span>
                   <select
+                    className="select-compact"
                     value={task.priority}
                     disabled={savingId !== null}
                     onChange={(e) => void quickChange(task, { priority: e.target.value as TaskPriority })}
@@ -210,7 +248,7 @@ export function TasksSection({ projectId, onTasksChanged }: { projectId: number;
                   >
                     {PRIORITIES.map((p) => (
                       <option key={p} value={p}>
-                        {taskPriorityLabel[p]}
+                        {t(`priority.${p}`)}
                       </option>
                     ))}
                   </select>
@@ -219,20 +257,19 @@ export function TasksSection({ projectId, onTasksChanged }: { projectId: number;
             ))}
           </ul>
           {totalPages > 1 && (
-            <nav className="pagination" aria-label="Páginas de tarefas">
-              <button type="button" onClick={() => setPage(page - 1)} disabled={page === 0} data-testid="tasks-prev">
-                Anterior
+            <nav className="row" aria-label={t('tasks.pagination')}>
+              <button type="button" className="btn btn-small" onClick={() => setPage(page - 1)} disabled={page === 0} data-testid="tasks-prev">
+                {t('projects.previous')}
               </button>
-              <span>
-                Página {page + 1} de {totalPages}
-              </span>
+              <span className="eyebrow">{t('projects.page', { page: page + 1, total: totalPages })}</span>
               <button
                 type="button"
+                className="btn btn-small"
                 onClick={() => setPage(page + 1)}
                 disabled={page + 1 >= totalPages}
                 data-testid="tasks-next"
               >
-                Seguinte
+                {t('projects.next')}
               </button>
             </nav>
           )}
@@ -242,27 +279,30 @@ export function TasksSection({ projectId, onTasksChanged }: { projectId: number;
   );
 }
 
-function CreateTaskForm({ projectId, onCreated }: { projectId: number; onCreated: () => void }) {
+function CreateTaskForm({ projectId, onCreated, onClose }: { projectId: number; onCreated: () => void; onClose: () => void }) {
+  const { t } = useTranslation();
+  const { toast } = useFeedback();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<TaskStatus>('TODO');
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [dueDate, setDueDate] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => titleRef.current?.focus(), []);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (pending) return;
-    setSuccess(null);
     const trimmed = title.trim();
     if (!trimmed) {
-      setError('O título é obrigatório e não pode ter só espaços.');
+      setError(t('tasks.titleRequired'));
       return;
     }
     if (trimmed.length < TASK_TITLE_MIN) {
-      setError(`O título tem de ter pelo menos ${TASK_TITLE_MIN} caracteres.`);
+      setError(t('tasks.titleTooShort', { min: TASK_TITLE_MIN }));
       return;
     }
     setPending(true);
@@ -280,24 +320,30 @@ function CreateTaskForm({ projectId, onCreated }: { projectId: number; onCreated
       setStatus('TODO');
       setPriority('MEDIUM');
       setDueDate('');
-      setSuccess(`Tarefa "${task.title}" criada.`);
+      toast(t('tasks.created', { title: task.title }));
       onCreated();
+      titleRef.current?.focus();
     } catch (e) {
-      setError(taskErrorMessage(e)); // the form keeps what was typed
+      setError(taskErrorMessage(t, e)); // the form keeps what was typed
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <form className="task-form" onSubmit={onSubmit} noValidate data-testid="task-create-form">
-      <h3>Nova tarefa</h3>
-      <label>
-        Título
-        <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={TASK_TITLE_MAX} data-testid="task-title-input" />
+    <form className="form" onSubmit={onSubmit} noValidate data-testid="task-create-form" style={{ paddingBottom: 12, borderBottom: '1px solid var(--line)' }}>
+      <div className="row-between">
+        <strong>{t('tasks.newTask')}</strong>
+        <button type="button" className="btn btn-small btn-ghost" onClick={onClose} aria-label={t('common.cancel')}>
+          <X size={18} aria-hidden="true" />
+        </button>
+      </div>
+      <label className="field">
+        {t('tasks.titleLabel')}
+        <input ref={titleRef} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={TASK_TITLE_MAX} data-testid="task-title-input" />
       </label>
-      <label>
-        Descrição (opcional)
+      <label className="field">
+        <span>{t('tasks.description')} <span className="hint">({t('common.optional')})</span></span>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -306,45 +352,42 @@ function CreateTaskForm({ projectId, onCreated }: { projectId: number; onCreated
           data-testid="task-description-input"
         />
       </label>
-      <div className="filters">
-        <label>
-          Estado
+      <div className="field-row">
+        <label className="field">
+          {t('tasks.status')}
           <select value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)} data-testid="task-status-input">
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {taskStatusLabel[s]}
+                {t(`status.${s}`)}
               </option>
             ))}
           </select>
         </label>
-        <label>
-          Prioridade
+        <label className="field">
+          {t('tasks.priority')}
           <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} data-testid="task-priority-input">
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
-                {taskPriorityLabel[p]}
+                {t(`priority.${p}`)}
               </option>
             ))}
           </select>
         </label>
-        <label>
-          Data limite (opcional)
+        <label className="field">
+          <span>{t('tasks.dueDate')} <span className="hint">({t('common.optional')})</span></span>
           <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} data-testid="task-due-date-input" />
         </label>
       </div>
       {error && (
-        <p role="alert" className="error" data-testid="task-create-error">
+        <Alert kind="error" testId="task-create-error">
           {error}
-        </p>
+        </Alert>
       )}
-      {success && (
-        <p role="status" className="success" data-testid="task-create-success">
-          {success}
-        </p>
-      )}
-      <button type="submit" disabled={pending} data-testid="task-create-submit">
-        {pending ? 'A criar…' : 'Criar tarefa'}
-      </button>
+      <div className="row">
+        <button type="submit" className="btn btn-primary" disabled={pending} data-testid="task-create-submit">
+          {pending ? t('tasks.creating') : t('tasks.create')}
+        </button>
+      </div>
     </form>
   );
 }

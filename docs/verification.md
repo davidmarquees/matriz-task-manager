@@ -86,3 +86,25 @@ Test data left in the development database: one comment on the demo task "Define
 
 Not checked in this increment: two users assigning the same person at the same instant (guaranteed by the primary key, no concurrent test); the layout at 360 px (Ex. 7).
 
+## Increment 6 — Complete frontend (Ex. 7), 2026-11-16
+
+Browser checks on ports 8081 (backend) and 5174 (frontend), with the demo accounts. Screenshots were shared with the developer in the project thread.
+
+| # | Scenario | Type | Expected | Observed | Evidence |
+|---|---|---|---|---|---|
+| V-32 | Builds and tests | Auto | Backend and frontend tests pass; build passes | Backend 61 tests (new: preferences), frontend 11 tests (Vitest), `npm run build` OK, `npm audit` 0 vulnerabilities | `./mvnw verify`, `npm test`, `npm run build` |
+| V-33 | Preferences saved in the profile (NFR1, NFR8, US13) | Auto + Manual | Language and theme saved and returned on another login; invalid value → 422; audited | As expected. Browser: switching to EN translated the whole dashboard ("Dashboard", "1 of 6 tasks done"); dark theme applied at once; `GET /api/auth/me` returned the saved values; restored to pt-PT / SYSTEM afterwards | `AuthFlowTest.preferencesAreSavedInTheProfileAndAudited`; browser |
+| V-34 | Login before authentication (A24) | Manual | Browser language decides before login (English browser → English page); PT / EN switch works before login | Login page shown in English, switched to PT, then logged in | Browser screenshot 1-login |
+| V-35 | Dashboard (FR9, US5, E2) | Manual | Totals, projects with counts and progress bars, overall progress, shortcuts; light and dark | 2 projects, 3 / 2 / 1 tasks, "17 %" (1 of 6 done), as in the approved design | Screenshots 2-painel-claro, 3-painel-escuro |
+| V-36 | Mobile 360 px (NFR7, US14) | Manual | No horizontal scrolling; menu ☰ with navigation, preferences and log out | `scrollWidth` = `clientWidth` = 360; one KPI ↗ button overflowed its card and was fixed (smaller cards on narrow screens); menu opens and closes | Screenshot 4-telemovel-360; `document.documentElement.scrollWidth` |
+| V-37 | Full path in the new interface | Manual | Create project → listed at once with a toast; create task with Enter → counts updated; change status → counts updated; delete project with the custom dialog | As expected; the dialog opened with the focus on "Cancelar"; the test project was deleted at the end | Screenshots 5-projeto, 6-tarefa, 7-dialogo-eliminar |
+| V-38 | Translations and accessible components | Auto | Same keys in PT and EN; status shown as words; counts with text labels (never colour alone); dialog starts on the safe choice, Escape cancels; login errors generic and form data kept; same-password refused before calling the API | As expected | `components.test.tsx`, `LoginPage.test.tsx`, `ChangePasswordPage.test.tsx` |
+
+Not checked in this increment: an automated contrast audit (contrast ratios were calculated by hand for the design tokens); screen-reader testing with a real screen reader; every screen at 360 px (dashboard, menu and login checked).
+
+### Correction after the developer's test: one style for every form control (2026-11-16)
+
+| # | Scenario | Type | Expected | Observed | Evidence |
+|---|---|---|---|---|---|
+| V-39 | Search, dropdowns and inputs share height and radius | Manual | Every search field, input, date and dropdown has the same height, radius, border and arrow, in every page and both themes | Before: search and form fields 46 px with 14 px corners; dropdowns in task rows and member roles 40 px pill-shaped with the browser's own arrow. After: every control 46 px / 14 px (measured on the project page: 15 controls, task page: 6, projects page: 3), same border and a drawn arrow in light and dark; textareas keep 14 px corners with a larger height | `getBoundingClientRect` and `getComputedStyle` in the browser; screenshots before / after |
+

@@ -204,6 +204,32 @@ class AuthFlowTest {
     }
 
     @Test
+    void preferencesAreSavedInTheProfileAndAudited() throws Exception { // NFR1, NFR8, US13
+        String email = createUser("prefs@example.test", "current-password", false);
+        MockHttpSession session = login(email, "current-password");
+
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/auth/me/preferences")
+                        .session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"locale\":\"en\",\"theme\":\"DARK\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.locale").value("en"))
+                .andExpect(jsonPath("$.theme").value("DARK"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/auth/me/preferences")
+                        .session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"theme\":\"PURPLE\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].field").value("theme"));
+
+        // another device: the saved choice comes with the user
+        MockHttpSession otherDevice = login(email, "current-password");
+        mvc.perform(get("/auth/me").session(otherDevice))
+                .andExpect(jsonPath("$.locale").value("en"))
+                .andExpect(jsonPath("$.theme").value("DARK"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM user_audit_log a JOIN users u ON u.id = a.target_user_id "
+                + "WHERE u.email = ? AND a.action = 'PREFERENCES_CHANGED'", Integer.class, email)).isEqualTo(1);
+    }
+
+    @Test
     void malformedRequestsGetTheContractStatusCodes() throws Exception {
         mvc.perform(post("/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"a@example.test\",\"password\":\"x\",\"role\":\"ADMIN\"}"))

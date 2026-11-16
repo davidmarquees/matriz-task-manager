@@ -1,12 +1,16 @@
+import { MessageSquare } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
 import { addComment, COMMENT_MAX, listComments, type Comment } from '../api/tasks';
-import { formatDate, userLabel } from '../labels';
+import { formatDate, formatTime, userLabel } from '../labels';
+import { Alert, Avatar, EmptyState, Skeleton } from '../ui/Bits';
 
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready'; comments: Comment[] };
 
 /** Comments of a task (FR11, US7): author and date from the server; no edit or delete (A14). */
 export function CommentsSection({ taskId }: { taskId: number }) {
+  const { t, i18n } = useTranslation();
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [body, setBody] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -28,14 +32,14 @@ export function CommentsSection({ taskId }: { taskId: number }) {
     event.preventDefault();
     if (pending) return;
     if (!body.trim()) {
-      setError('O comentário não pode estar vazio nem ter só espaços.');
+      setError(t('comments.blank'));
       return;
     }
     setPending(true);
     setError(null);
     try {
       const comment = await addComment(taskId, body);
-      // use the comment confirmed by the API, without duplicating it
+      // show the comment confirmed by the API, without duplicating it
       setLoad((current) =>
         current.status === 'ready' && !current.comments.some((c) => c.id === comment.id)
           ? { status: 'ready', comments: [...current.comments, comment] }
@@ -45,77 +49,77 @@ export function CommentsSection({ taskId }: { taskId: number }) {
     } catch (e) {
       // the text is kept so it can be sent again
       if (e instanceof ApiError && e.status === 401) return;
-      if (e instanceof ApiError && e.fieldCode('body') === 'TOO_LONG') {
-        setError(`O comentário pode ter no máximo ${COMMENT_MAX} caracteres.`);
-      } else if (e instanceof ApiError && e.fieldCode('body')) {
-        setError('O comentário não pode estar vazio nem ter só espaços.');
-      } else if (e instanceof ApiError && e.status === 404) {
-        setError('A tarefa já não existe.');
-      } else {
-        setError('Não foi possível enviar o comentário. Tente novamente.');
-      }
+      if (e instanceof ApiError && e.fieldCode('body') === 'TOO_LONG') setError(t('comments.tooLong', { max: COMMENT_MAX }));
+      else if (e instanceof ApiError && e.fieldCode('body')) setError(t('comments.blank'));
+      else if (e instanceof ApiError && e.status === 404) setError(t('comments.gone'));
+      else setError(t('comments.error'));
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <section className="panel" data-testid="comments-section">
-      <h2>Comentários{load.status === 'ready' ? ` (${load.comments.length})` : ''}</h2>
-      {load.status === 'loading' && <p data-testid="comments-loading">A carregar…</p>}
+    <section className="tile" aria-labelledby="comments-title" data-testid="comments-section">
+      <h2 id="comments-title">
+        {t('comments.title')} {load.status === 'ready' && <span className="eyebrow">{load.comments.length}</span>}
+      </h2>
+      {load.status === 'loading' && <Skeleton rows={2} label={t('common.loading')} testId="comments-loading" />}
       {load.status === 'error' && (
-        <p role="alert" className="error" data-testid="comments-error">
-          Não foi possível carregar os comentários.{' '}
-          <button type="button" onClick={() => void reload()}>
-            Tentar novamente
+        <Alert kind="error" testId="comments-error">
+          {t('comments.loadError')}{' '}
+          <button type="button" className="link-button" onClick={() => void reload()}>
+            {t('common.retry')}
           </button>
-        </p>
+        </Alert>
       )}
       {load.status === 'ready' && load.comments.length === 0 && (
-        <p className="muted" data-testid="comments-empty">
-          Ainda não há comentários.
-        </p>
+        <EmptyState icon={MessageSquare} title={t('comments.empty')} testId="comments-empty" />
       )}
       {load.status === 'ready' && load.comments.length > 0 && (
-        <ul className="comments" data-testid="comment-list">
+        <ul className="list" data-testid="comment-list">
           {load.comments.map((c) => (
-            <li key={c.id} data-testid="comment-item">
-              <p className="muted">
-                <strong data-testid="comment-author">{userLabel(c.author)}</strong> ·{' '}
-                <span data-testid="comment-date">
-                  {formatDate(c.createdAt)}{' '}
-                  {new Date(c.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+            <li key={c.id} className="comment" data-testid="comment-item">
+              <Avatar name={c.author.name} small />
+              <div className="comment-bubble">
+                <span style={{ fontSize: 13 }}>
+                  <strong data-testid="comment-author">{userLabel(t, c.author)}</strong>{' '}
+                  <span className="eyebrow" style={{ fontSize: 11 }} data-testid="comment-date">
+                    · {formatDate(c.createdAt, i18n.language)} {formatTime(c.createdAt, i18n.language)}
+                  </span>
                 </span>
-              </p>
-              <p className="description" data-testid="comment-body">
-                {c.body}
-              </p>
+                <p className="pre-wrap" data-testid="comment-body">
+                  {c.body}
+                </p>
+              </div>
             </li>
           ))}
         </ul>
       )}
-      <form onSubmit={onSubmit} noValidate data-testid="comment-form">
-        <label>
-          Novo comentário
+      <form className="form" onSubmit={onSubmit} noValidate data-testid="comment-form">
+        <label className="field">
+          {t('comments.newLabel')}
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
             maxLength={COMMENT_MAX}
             rows={3}
+            placeholder={t('comments.placeholder')}
             data-testid="comment-input"
           />
         </label>
-        <span className="muted" data-testid="comment-counter">
-          {body.length}/{COMMENT_MAX}
-        </span>
         {error && (
-          <p role="alert" className="error" data-testid="comment-error">
+          <Alert kind="error" testId="comment-error">
             {error}
-          </p>
+          </Alert>
         )}
-        <button type="submit" disabled={pending} data-testid="comment-submit">
-          {pending ? 'A enviar…' : 'Comentar'}
-        </button>
+        <div className="row-between">
+          <span className="hint" data-testid="comment-counter">
+            {t('common.chars', { count: body.length, max: COMMENT_MAX })}
+          </span>
+          <button type="submit" className="btn btn-primary" disabled={pending} data-testid="comment-submit">
+            {pending ? t('comments.sending') : t('comments.submit')}
+          </button>
+        </div>
       </form>
     </section>
   );

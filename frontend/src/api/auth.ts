@@ -33,3 +33,10 @@ export function logout(): Promise<void> {
 export function changeOwnPassword(currentPassword: string, newPassword: string): Promise<void> {
   return api<void>('/auth/password', { method: 'POST', body: { currentPassword, newPassword } });
 }
+
+export type Theme = CurrentUser['theme'];
+
+/** updatePreferences: language and theme saved in the profile (NFR1, NFR8). */
+export function updatePreferences(changes: { locale?: CurrentUser['locale']; theme?: Theme }): Promise<CurrentUser> {
+  return api<CurrentUser>('/auth/me/preferences', { method: 'PATCH', body: changes });
+}

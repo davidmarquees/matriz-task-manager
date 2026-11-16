@@ -1,4 +1,6 @@
+import { ArrowLeft, Pencil, SearchX, Trash2, UserPlus } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import {
@@ -16,9 +18,11 @@ import {
   type ProjectRole,
 } from '../api/projects';
 import { useAuth } from '../auth/AuthContext';
-import { TaskCountsLine } from '../components/TaskCountsLine';
+import { CountsBar } from '../components/CountsBar';
 import { TasksSection } from '../components/TasksSection';
-import { projectRoleLabel, userLabel } from '../labels';
+import { userLabel } from '../labels';
+import { Alert, Avatar, EmptyState, Skeleton } from '../ui/Bits';
+import { useFeedback } from '../ui/Feedback';
 
 type Load =
   | { status: 'loading' }
@@ -26,15 +30,29 @@ type Load =
   | { status: 'error' }
   | { status: 'ready'; project: Project; members: Member[] };
 
-/** Project detail (Worksheet 03, Ex. 4): data, counts, members; edit, delete and members for Managers. */
+/** Project detail (Ex. 4 to 7): data, counts, tasks and members; edit, delete and members for Managers. */
 export function ProjectDetailPage() {
+  const { t } = useTranslation();
   const id = Number(useParams().projectId);
   const navigate = useNavigate();
   const { state } = useAuth();
+  const { confirm, toast } = useFeedback();
   const currentUserId = state.status === 'authenticated' ? state.user.id : null;
   const [load, setLoad] = useState<Load>({ status: 'loading' });
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // After a task change: refresh the project (counts) without touching the rest of the page.
+  const reload = useCallback(async () => {
+    try {
+      const [project, members] = await Promise.all([getProject(id), listMembers(id)]);
+      setLoad({ status: 'ready', project, members });
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 404 || e.status === 400)) setLoad({ status: 'not-found' });
+      else if (!(e instanceof ApiError && e.status === 401)) setLoad({ status: 'error' });
+    }
+  }, [id]);
+
+  // after a task change: refresh the counts only
   const refreshCounts = useCallback(async () => {
     try {
       const project = await getProject(id);
@@ -44,80 +62,120 @@ export function ProjectDetailPage() {
     }
   }, [id]);
 
-  const reload = useCallback(async () => {
-    try {
-      const [project, members] = await Promise.all([getProject(id), listMembers(id)]);
-      setLoad({ status: 'ready', project, members });
-    } catch (e) {
-      if (e instanceof ApiError && (e.status === 404 || e.status === 400)) {
-        setLoad({ status: 'not-found' });
-      } else if (!(e instanceof ApiError && e.status === 401)) {
-        setLoad({ status: 'error' });
-      }
-    }
-  }, [id]);
-
   useEffect(() => {
     setLoad({ status: 'loading' });
     void reload();
   }, [reload]);
 
-  if (load.status === 'loading') return <p className="page" data-testid="project-loading">A carregar…</p>;
+  if (load.status === 'loading') {
+    return <Skeleton rows={5} label={t('common.loading')} testId="project-loading" />;
+  }
   if (load.status === 'not-found') {
     return (
-      <main className="page" data-testid="project-not-found">
-        <p>Projeto não encontrado.</p>
-        <Link to="/projects">Voltar aos projetos</Link>
-      </main>
+      <EmptyState icon={SearchX} title={t('project.notFound')} testId="project-not-found">
+        <Link className="btn" to="/projects">
+          {t('project.back')}
+        </Link>
+      </EmptyState>
     );
   }
   if (load.status === 'error') {
     return (
-      <main className="page">
-        <p role="alert" className="error" data-testid="project-error">
-          Não foi possível carregar o projeto.{' '}
-          <button type="button" onClick={() => void reload()}>
-            Tentar novamente
-          </button>
-        </p>
-      </main>
+      <Alert kind="error" testId="project-error">
+        {t('project.loadError')}{' '}
+        <button type="button" className="link-button" onClick={() => void reload()}>
+          {t('common.retry')}
+        </button>
+      </Alert>
     );
   }
 
   const { project, members } = load;
   const isManager = project.myRole === 'MANAGER';
 
-  return (
-    <main className="page" data-testid="project-detail">
-      <p>
-        <Link to="/projects">← Projetos</Link>
-      </p>
-      <h1 data-testid="project-name">{project.name}</h1>
-      {project.description && <p data-testid="project-description">{project.description}</p>}
-      <p className="muted">
-        {project.myRole && <>O seu papel: {projectRoleLabel[project.myRole]} · </>}
-        Criado por {userLabel(project.createdBy)}
-      </p>
-      {project.taskCounts && <TaskCountsLine counts={project.taskCounts} testId="project-counts" />}
+  async function onDelete() {
+    const ok = await confirm({
+      title: t('project.deleteTitle'),
+      message: t('project.deleteText', { name: project.name }),
+      confirmLabel: t('project.delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await deleteProject(project.id);
+      toast(t('project.deleted'));
+      navigate('/projects', { replace: true });
+    } catch (e) {
+      if (!(e instanceof ApiError && e.status === 401)) setError(t('project.deleteError'));
+    }
+  }
 
-      {isManager && (
+  return (
+    <main className="stack" data-testid="project-detail">
+      <Link to="/projects" className="row" style={{ gap: 6, fontWeight: 600, textDecoration: 'none' }}>
+        <ArrowLeft size={16} aria-hidden="true" />
+        {t('project.back')}
+      </Link>
+      <div className="page-head">
+        <div className="page-head-text">
+          <span className="eyebrow">
+            {project.myRole && t('project.yourRole', { role: t(`roles.${project.myRole}`) })} ·{' '}
+            {t('project.createdBy', { name: userLabel(t, project.createdBy) })}
+          </span>
+          <h1 className="page-title" data-testid="project-name">
+            {project.name}
+          </h1>
+          {project.description && (
+            <p className="muted pre-wrap" data-testid="project-description">
+              {project.description}
+            </p>
+          )}
+        </div>
+        {isManager && !editing && (
+          <div className="row">
+            <button type="button" className="btn" onClick={() => setEditing(true)} data-testid="project-edit-button">
+              <Pencil size={16} aria-hidden="true" />
+              {t('project.edit')}
+            </button>
+            <button type="button" className="btn btn-danger" onClick={() => void onDelete()} data-testid="project-delete-button">
+              <Trash2 size={16} aria-hidden="true" />
+              {t('project.delete')}
+            </button>
+          </div>
+        )}
+      </div>
+      {error && (
+        <Alert kind="error" testId="project-delete-error">
+          {error}
+        </Alert>
+      )}
+      {project.taskCounts && (
+        <section className="tile">
+          <CountsBar counts={project.taskCounts} testId="project-counts" />
+        </section>
+      )}
+
+      {isManager && editing && (
         <EditProjectForm
           project={project}
-          onSaved={(updated) => setLoad({ ...load, project: updated })}
-          onReload={reload}
-          onDeleted={() => navigate('/projects', { replace: true })}
+          onSaved={(updated) => {
+            setLoad({ ...load, project: updated });
+            setEditing(false);
+            toast(t('project.saved'));
+          }}
+          onCancel={() => setEditing(false)}
+          onReload={async () => {
+            await reload();
+            setEditing(false);
+          }}
         />
       )}
 
-      <TasksSection projectId={project.id} onTasksChanged={() => void refreshCounts()} />
-
-      <MembersSection
-        projectId={project.id}
-        members={members}
-        canManage={isManager}
-        currentUserId={currentUserId}
-        onChanged={reload}
-      />
+      <div className="grid-main">
+        <TasksSection projectId={project.id} onTasksChanged={() => void refreshCounts()} />
+        <MembersSection projectId={project.id} members={members} canManage={isManager} currentUserId={currentUserId} onChanged={reload} />
+      </div>
     </main>
   );
 }
@@ -125,145 +183,84 @@ export function ProjectDetailPage() {
 function EditProjectForm({
   project,
   onSaved,
+  onCancel,
   onReload,
-  onDeleted,
 }: {
   project: Project;
   onSaved: (project: Project) => void;
+  onCancel: () => void;
   onReload: () => Promise<void>;
-  onDeleted: () => void;
 }) {
-  const [editing, setEditing] = useState(false);
+  const { t } = useTranslation();
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description ?? '');
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [conflict, setConflict] = useState(false);
   const [pending, setPending] = useState(false);
-
-  function startEditing() {
-    setName(project.name);
-    setDescription(project.description ?? '');
-    setError(null);
-    setSuccess(null);
-    setEditing(true);
-  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (pending) return;
     if (!name.trim()) {
-      setError('O nome é obrigatório.');
+      setError(t('projects.nameRequired'));
       return;
     }
     setPending(true);
     setError(null);
+    setConflict(false);
     try {
-      const updated = await updateProject(project.id, project.version, {
-        name,
-        description: description.trim() ? description : null,
-      });
-      onSaved(updated);
-      setEditing(false);
-      setSuccess('Alterações guardadas.');
+      onSaved(await updateProject(project.id, project.version, { name, description: description.trim() ? description : null }));
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) {
-        setError('O projeto foi alterado por outro utilizador. Recarregue os dados e tente novamente.');
-      } else if (e instanceof ApiError && e.fieldCode('name') === 'TOO_LONG') {
-        setError(`O nome pode ter no máximo ${PROJECT_NAME_MAX} caracteres.`);
-      } else if (e instanceof ApiError && e.fieldCode('name')) {
-        setError('O nome é obrigatório.');
-      } else if (e instanceof ApiError && e.fieldCode('description')) {
-        setError(`A descrição pode ter no máximo ${PROJECT_DESCRIPTION_MAX} caracteres.`);
-      } else if (!(e instanceof ApiError && e.status === 401)) {
-        setError('Não foi possível guardar. Tente novamente.');
-      }
+      if (e instanceof ApiError && e.status === 401) return;
+      setConflict(e instanceof ApiError && e.status === 409);
+      if (e instanceof ApiError && e.status === 409) setError(t('project.conflict'));
+      else if (e instanceof ApiError && e.fieldCode('name') === 'TOO_LONG') setError(t('projects.nameTooLong', { max: PROJECT_NAME_MAX }));
+      else if (e instanceof ApiError && e.fieldCode('name')) setError(t('projects.nameRequired'));
+      else if (e instanceof ApiError && e.fieldCode('description')) setError(t('projects.descriptionTooLong', { max: PROJECT_DESCRIPTION_MAX }));
+      else setError(t('common.genericError'));
     } finally {
       setPending(false);
     }
   }
 
-  async function onDelete() {
-    // NFR6: destructive actions ask for confirmation
-    if (!window.confirm(`Eliminar o projeto "${project.name}"? As tarefas e os comentários também são eliminados.`)) {
-      return;
-    }
-    setPending(true);
-    setError(null);
-    try {
-      await deleteProject(project.id);
-      onDeleted();
-    } catch (e) {
-      if (!(e instanceof ApiError && e.status === 401)) {
-        setError('Não foi possível eliminar o projeto.');
-      }
-      setPending(false);
-    }
-  }
-
-  if (!editing) {
-    return (
-      <div className="actions">
-        <button type="button" onClick={startEditing} data-testid="project-edit-button">
-          Editar projeto
-        </button>
-        <button type="button" className="danger" onClick={onDelete} disabled={pending} data-testid="project-delete-button">
-          Eliminar projeto
-        </button>
-        {success && (
-          <span role="status" className="success" data-testid="project-edit-success">
-            {success}
-          </span>
-        )}
-        {error && (
-          <p role="alert" className="error" data-testid="project-delete-error">
-            {error}
-          </p>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <form className="panel" onSubmit={onSubmit} noValidate data-testid="project-edit-form">
-      <h2>Editar projeto</h2>
-      <label>
-        Nome
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={PROJECT_NAME_MAX}
-          data-testid="project-edit-name"
-        />
-      </label>
-      <label>
-        Descrição (opcional)
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          maxLength={PROJECT_DESCRIPTION_MAX}
-          rows={3}
-          data-testid="project-edit-description"
-        />
-      </label>
-      {error && (
-        <p role="alert" className="error" data-testid="project-edit-error">
-          {error}{' '}
-          {error.startsWith('O projeto foi alterado') && (
-            <button type="button" onClick={() => void onReload().then(() => setEditing(false))}>
-              Recarregar
-            </button>
-          )}
-        </p>
-      )}
-      <div className="actions">
-        <button type="submit" disabled={pending} data-testid="project-edit-submit">
-          {pending ? 'A guardar…' : 'Guardar'}
-        </button>
-        <button type="button" className="secondary" onClick={() => setEditing(false)} disabled={pending}>
-          Cancelar
-        </button>
-      </div>
-    </form>
+    <section className="tile" aria-labelledby="edit-project-title">
+      <h2 id="edit-project-title">{t('project.editTitle')}</h2>
+      <form className="form" onSubmit={onSubmit} noValidate data-testid="project-edit-form">
+        <label className="field">
+          {t('projects.name')}
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={PROJECT_NAME_MAX} data-testid="project-edit-name" />
+        </label>
+        <label className="field">
+          <span>{t('projects.description')} <span className="hint">({t('common.optional')})</span></span>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={PROJECT_DESCRIPTION_MAX}
+            rows={3}
+            data-testid="project-edit-description"
+          />
+        </label>
+        {error && (
+          <Alert kind="error" testId="project-edit-error">
+            {error}{' '}
+            {conflict && (
+              <button type="button" className="link-button" onClick={() => void onReload()}>
+                {t('project.reload')}
+              </button>
+            )}
+          </Alert>
+        )}
+        <div className="row">
+          <button type="submit" className="btn btn-primary" disabled={pending} data-testid="project-edit-submit">
+            {pending ? t('common.saving') : t('common.save')}
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={pending}>
+            {t('common.cancel')}
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }
 
@@ -280,6 +277,8 @@ function MembersSection({
   currentUserId: number | null;
   onChanged: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
+  const { confirm, toast } = useFeedback();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<ProjectRole>('MEMBER');
   const [error, setError] = useState<string | null>(null);
@@ -288,23 +287,24 @@ function MembersSection({
   function messageFor(e: unknown): string | null {
     if (e instanceof ApiError) {
       if (e.status === 401) return null;
-      if (e.problem?.code === 'ALREADY_MEMBER') return 'Esse utilizador já é membro do projeto.';
-      if (e.problem?.code === 'LAST_MANAGER') return 'O projeto tem de ter pelo menos um Gestor.';
-      if (e.fieldCode('email') === 'USER_NOT_ELIGIBLE') return 'Não há nenhuma conta ativa que possa ser adicionada com esse email.';
-      if (e.fieldCode('email')) return 'Indique o email.';
-      if (e.status === 403) return 'Não tem permissão para gerir os membros.';
-      if (e.status === 404) return 'O membro ou o projeto já não existe.';
+      if (e.problem?.code === 'ALREADY_MEMBER') return t('members.already');
+      if (e.problem?.code === 'LAST_MANAGER') return t('members.lastManager');
+      if (e.fieldCode('email') === 'USER_NOT_ELIGIBLE') return t('members.notEligible');
+      if (e.fieldCode('email')) return t('members.emailRequired');
+      if (e.status === 403) return t('members.noPermission');
+      if (e.status === 404) return t('members.gone');
     }
-    return 'Não foi possível concluir a operação. Tente novamente.';
+    return t('common.genericError');
   }
 
-  async function run(action: () => Promise<unknown>, after?: () => void) {
+  async function run(action: () => Promise<unknown>, success?: string, after?: () => void) {
     if (pending) return;
     setPending(true);
     setError(null);
     try {
       await action();
       after?.();
+      if (success) toast(success);
       await onChanged();
     } catch (e) {
       setError(messageFor(e));
@@ -316,83 +316,101 @@ function MembersSection({
   function onAdd(event: FormEvent) {
     event.preventDefault();
     if (!email.trim()) {
-      setError('Indique o email.');
+      setError(t('members.emailRequired'));
       return;
     }
-    void run(() => addMember(projectId, email.trim(), role), () => setEmail(''));
+    void run(() => addMember(projectId, email.trim(), role), t('members.added'), () => setEmail(''));
   }
 
-  function onRemove(member: Member) {
-    const who = member.user.id === currentUserId ? 'sair deste projeto' : `remover ${userLabel(member.user)} do projeto`;
-    // NFR6: confirmation before removing a member
-    if (window.confirm(`Tem a certeza de que quer ${who}? As tarefas atribuídas deixam de lhe estar atribuídas.`)) {
-      void run(() => removeMember(projectId, member.user.id));
-    }
+  async function onRemove(member: Member) {
+    const self = member.user.id === currentUserId;
+    const ok = await confirm({
+      title: self ? t('members.leaveTitle') : t('members.removeTitle'),
+      message: self ? t('members.leaveText') : t('members.removeText', { name: userLabel(t, member.user) }),
+      confirmLabel: t('common.remove'),
+      danger: true,
+    });
+    if (ok) void run(() => removeMember(projectId, member.user.id));
   }
 
-  function onRoleChange(member: Member, projectRole: ProjectRole) {
-    if (projectRole === 'MEMBER' && !window.confirm(`Despromover ${userLabel(member.user)} a Membro?`)) {
-      return;
+  async function onRoleChange(member: Member, projectRole: ProjectRole) {
+    if (projectRole === 'MEMBER') {
+      const ok = await confirm({
+        title: t('members.demoteTitle'),
+        message: t('members.demoteText', { name: userLabel(t, member.user) }),
+        danger: true,
+      });
+      if (!ok) return;
     }
     void run(() => changeMemberRole(projectId, member.user.id, projectRole));
   }
 
   return (
-    <section className="panel" data-testid="members-section">
-      <h2>Membros ({members.length})</h2>
-      <ul className="members" data-testid="member-list">
+    <section className="tile" aria-labelledby="members-title" data-testid="members-section" style={{ alignSelf: 'start' }}>
+      <h2 id="members-title">
+        {t('members.title')} <span className="eyebrow">{members.length}</span>
+      </h2>
+      <ul className="list" data-testid="member-list">
         {members.map((member) => (
-          <li key={member.user.id} data-testid="member-item">
-            <span data-testid="member-name">{userLabel(member.user)}</span>
+          <li key={member.user.id} data-testid="member-item" className="row-between">
+            <span className="user-chip" style={{ padding: 0 }}>
+              <Avatar name={member.user.name} small tone={member.projectRole === 'MANAGER' ? 'brick' : 'pine'} />
+              <span data-testid="member-name">{userLabel(t, member.user)}</span>
+            </span>
             {canManage ? (
-              <>
+              <span className="row" style={{ gap: 6 }}>
                 <select
+                  className="select-compact"
                   value={member.projectRole}
-                  onChange={(e) => onRoleChange(member, e.target.value as ProjectRole)}
+                  onChange={(e) => void onRoleChange(member, e.target.value as ProjectRole)}
                   disabled={pending}
-                  aria-label={`Papel de ${userLabel(member.user)}`}
+                  aria-label={t('members.roleOf', { name: userLabel(t, member.user) })}
                   data-testid="member-role-select"
                 >
-                  <option value="MANAGER">{projectRoleLabel.MANAGER}</option>
-                  <option value="MEMBER">{projectRoleLabel.MEMBER}</option>
+                  <option value="MANAGER">{t('roles.MANAGER')}</option>
+                  <option value="MEMBER">{t('roles.MEMBER')}</option>
                 </select>
                 <button
                   type="button"
-                  className="secondary"
-                  onClick={() => onRemove(member)}
+                  className="btn btn-small btn-ghost"
+                  onClick={() => void onRemove(member)}
                   disabled={pending}
+                  aria-label={`${t('common.remove')}: ${userLabel(t, member.user)}`}
                   data-testid="member-remove-button"
                 >
-                  Remover
+                  <Trash2 size={16} aria-hidden="true" />
                 </button>
-              </>
+              </span>
             ) : (
-              <span className="tag">{projectRoleLabel[member.projectRole]}</span>
+              <span className="pill pill-role">{t(`roles.${member.projectRole}`)}</span>
             )}
           </li>
         ))}
       </ul>
       {error && (
-        <p role="alert" className="error" data-testid="members-error">
+        <Alert kind="error" testId="members-error">
           {error}
-        </p>
+        </Alert>
       )}
       {canManage && (
-        <form className="inline-form" onSubmit={onAdd} noValidate data-testid="member-add-form">
-          <label>
-            Email do novo membro
+        <form className="form" onSubmit={onAdd} noValidate data-testid="member-add-form">
+          <label className="field">
+            {t('members.emailLabel')}
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} data-testid="member-email-input" />
           </label>
-          <label>
-            Papel
-            <select value={role} onChange={(e) => setRole(e.target.value as ProjectRole)} data-testid="member-role-input">
-              <option value="MEMBER">{projectRoleLabel.MEMBER}</option>
-              <option value="MANAGER">{projectRoleLabel.MANAGER}</option>
-            </select>
-          </label>
-          <button type="submit" disabled={pending} data-testid="member-add-submit">
-            Adicionar
-          </button>
+          <div className="row">
+            <label className="field" style={{ flex: 1 }}>
+              {t('members.role')}
+              <select value={role} onChange={(e) => setRole(e.target.value as ProjectRole)} data-testid="member-role-input">
+                <option value="MEMBER">{t('roles.MEMBER')}</option>
+                <option value="MANAGER">{t('roles.MANAGER')}</option>
+              </select>
+            </label>
+            <button type="submit" className="btn btn-primary" disabled={pending} data-testid="member-add-submit" style={{ alignSelf: 'flex-end' }}>
+              <UserPlus size={16} aria-hidden="true" />
+              {t('members.add')}
+            </button>
+          </div>
         </form>
       )}
     </section>

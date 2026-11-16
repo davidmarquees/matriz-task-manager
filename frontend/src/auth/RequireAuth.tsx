@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Navigate, useLocation } from 'react-router-dom';
+import { Skeleton } from '../ui/Bits';
 import { useAuth } from './AuthContext';
 
 /**
@@ -9,9 +11,16 @@ import { useAuth } from './AuthContext';
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { state } = useAuth();
   const location = useLocation();
+  const { t } = useTranslation();
 
   if (state.status === 'loading') {
-    return <p data-testid="loading">A carregar…</p>;
+    return (
+      <div className="shell">
+        <div className="board" style={{ padding: 24 }}>
+          <Skeleton rows={4} label={t('common.loading')} testId="loading" />
+        </div>
+      </div>
+    );
   }
   if (state.status === 'anonymous') {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;

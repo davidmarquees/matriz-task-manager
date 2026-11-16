@@ -1,4 +1,6 @@
+import { ArrowLeft, Pencil, SearchX, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { getProject, type Project } from '../api/projects';
@@ -17,7 +19,9 @@ import { AssigneesSection } from '../components/AssigneesSection';
 import { CommentsSection } from '../components/CommentsSection';
 import { LastChangeNote } from '../components/LastChangeNote';
 import { taskErrorMessage } from '../components/TasksSection';
-import { formatDate, taskPriorityLabel, taskStatusLabel, userLabel } from '../labels';
+import { formatDate, userLabel } from '../labels';
+import { Alert, EmptyState, PriorityPill, Skeleton, StatusPill } from '../ui/Bits';
+import { useFeedback } from '../ui/Feedback';
 
 type Load =
   | { status: 'loading' }
@@ -25,13 +29,16 @@ type Load =
   | { status: 'error' }
   | { status: 'ready'; task: Task; project: Project };
 
-/** Task detail (Worksheet 03, Ex. 5 and 6): data, edit, status, priority, delete, assignees and comments. */
+/** Task page (Ex. 5 to 7): data, edit, status, priority, delete, assignees and comments. */
 export function TaskDetailPage() {
+  const { t, i18n } = useTranslation();
   const id = Number(useParams().taskId);
   const navigate = useNavigate();
   const { state } = useAuth();
+  const { confirm, toast } = useFeedback();
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [editing, setEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -39,11 +46,8 @@ export function TaskDetailPage() {
       const project = await getProject(task.projectId);
       setLoad({ status: 'ready', task, project });
     } catch (e) {
-      if (e instanceof ApiError && (e.status === 404 || e.status === 400 || e.status === 403)) {
-        setLoad({ status: 'not-found' });
-      } else if (!(e instanceof ApiError && e.status === 401)) {
-        setLoad({ status: 'error' });
-      }
+      if (e instanceof ApiError && (e.status === 404 || e.status === 400 || e.status === 403)) setLoad({ status: 'not-found' });
+      else if (!(e instanceof ApiError && e.status === 401)) setLoad({ status: 'error' });
     }
   }, [id]);
 
@@ -52,25 +56,24 @@ export function TaskDetailPage() {
     void reload();
   }, [reload]);
 
-  if (load.status === 'loading') return <p className="page" data-testid="task-loading">A carregar…</p>;
+  if (load.status === 'loading') return <Skeleton rows={5} label={t('common.loading')} testId="task-loading" />;
   if (load.status === 'not-found') {
     return (
-      <main className="page" data-testid="task-not-found">
-        <p>Tarefa não encontrada.</p>
-        <Link to="/projects">Voltar aos projetos</Link>
-      </main>
+      <EmptyState icon={SearchX} title={t('task.notFound')} testId="task-not-found">
+        <Link className="btn" to="/projects">
+          {t('project.back')}
+        </Link>
+      </EmptyState>
     );
   }
   if (load.status === 'error') {
     return (
-      <main className="page">
-        <p role="alert" className="error" data-testid="task-error">
-          Não foi possível carregar a tarefa.{' '}
-          <button type="button" onClick={() => void reload()}>
-            Tentar novamente
-          </button>
-        </p>
-      </main>
+      <Alert kind="error" testId="task-error">
+        {t('task.loadError')}{' '}
+        <button type="button" className="link-button" onClick={() => void reload()}>
+          {t('common.retry')}
+        </button>
+      </Alert>
     );
   }
 
@@ -79,65 +82,108 @@ export function TaskDetailPage() {
   const canDelete = project.myRole === 'MANAGER' || task.createdBy.id === userId; // A10, D23
 
   async function onDelete() {
-    if (!window.confirm(`Eliminar a tarefa "${task.title}"? Esta ação não pode ser desfeita.`)) return; // NFR6
+    const ok = await confirm({
+      title: t('task.deleteTitle'),
+      message: t('task.deleteText', { title: task.title }),
+      confirmLabel: t('task.delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
     try {
       await deleteTask(task.id);
+      toast(t('task.deleted'));
       navigate(`/projects/${task.projectId}`, { replace: true });
     } catch (e) {
-      if (e instanceof ApiError && e.status === 403) window.alert('Só o Gestor do projeto ou quem criou a tarefa a pode eliminar.');
-      else if (!(e instanceof ApiError && e.status === 401)) window.alert('Não foi possível eliminar a tarefa.');
+      if (e instanceof ApiError && e.status === 403) setError(t('task.deleteForbidden'));
+      else if (!(e instanceof ApiError && e.status === 401)) setError(t('task.deleteError'));
     }
   }
 
   return (
-    <main className="page" data-testid="task-detail">
-      <p>
-        <Link to={`/projects/${project.id}`}>← {project.name}</Link>
-      </p>
-      {editing ? (
-        <EditTaskForm
-          task={task}
-          onSaved={(updated) => {
-            setLoad({ ...load, task: updated });
-            setEditing(false);
-          }}
-          onCancel={() => setEditing(false)}
-          onReload={reload}
-        />
-      ) : (
-        <>
-          <h1 data-testid="task-title">{task.title}</h1>
-          <LastChangeNote task={task} />
-          <dl className="task-fields">
-            <dt>Estado</dt>
-            <dd data-testid="task-status">{taskStatusLabel[task.status]}</dd>
-            <dt>Prioridade</dt>
-            <dd data-testid="task-priority">{taskPriorityLabel[task.priority]}</dd>
-            <dt>Data limite</dt>
-            <dd data-testid="task-due-date">{task.dueDate ? formatDate(task.dueDate) : '—'}</dd>
-            <dt>Criada por</dt>
-            <dd>
-              {userLabel(task.createdBy)} · {formatDate(task.createdAt)}
-            </dd>
-            <dt>Descrição</dt>
-            <dd className="description" data-testid="task-description">
-              {task.description ?? '—'}
-            </dd>
-          </dl>
-          <div className="actions">
-            <button type="button" onClick={() => setEditing(true)} data-testid="task-edit-button">
-              Editar tarefa
-            </button>
-            {canDelete && (
-              <button type="button" className="danger" onClick={() => void onDelete()} data-testid="task-delete-button">
-                Eliminar tarefa
-              </button>
-            )}
+    <main className="stack" data-testid="task-detail">
+      <Link to={`/projects/${project.id}`} className="row" style={{ gap: 6, fontWeight: 600, textDecoration: 'none' }}>
+        <ArrowLeft size={16} aria-hidden="true" />
+        {project.name}
+      </Link>
+      <div className="page-head">
+        <div className="page-head-text">
+          <span className="eyebrow">
+            {t('task.number', { id: task.id })} · {t('task.createdBy', { name: userLabel(t, task.createdBy), date: formatDate(task.createdAt, i18n.language) })}
+          </span>
+          <h1 className="page-title" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.6rem)' }} data-testid="task-title">
+            {task.title}
+          </h1>
+          <div className="row">
+            <StatusPill status={task.status} testId="task-status" />
+            <PriorityPill priority={task.priority} testId="task-priority" />
+            <LastChangeNote task={task} />
           </div>
-          <AssigneesSection task={task} onChanged={reload} />
-          <CommentsSection taskId={task.id} />
-        </>
+        </div>
+      </div>
+      {error && (
+        <Alert kind="error" testId="task-delete-error">
+          {error}
+        </Alert>
       )}
+
+      <div className="grid-main">
+        <div className="stack">
+          {editing ? (
+            <EditTaskForm
+              task={task}
+              onSaved={(updated) => {
+                setLoad({ ...load, task: updated });
+                setEditing(false);
+                toast(t('task.saved'));
+              }}
+              onCancel={() => setEditing(false)}
+              onReload={async () => {
+                await reload();
+                setEditing(false);
+              }}
+            />
+          ) : (
+            <section className="tile" aria-labelledby="description-title">
+              <h2 id="description-title">{t('tasks.description')}</h2>
+              <p className="pre-wrap" data-testid="task-description">
+                {task.description ?? <span className="muted">{t('task.noDescription')}</span>}
+              </p>
+            </section>
+          )}
+          <CommentsSection taskId={task.id} />
+        </div>
+        <div className="stack">
+          <section className="tile" aria-labelledby="details-title">
+            <h2 id="details-title">{t('task.details')}</h2>
+            <dl className="details-list">
+              <dt>{t('tasks.status')}</dt>
+              <dd>{t(`status.${task.status}`)}</dd>
+              <dt>{t('tasks.priority')}</dt>
+              <dd>{t(`priority.${task.priority}`)}</dd>
+              <dt>{t('tasks.dueDate')}</dt>
+              <dd className="mono" data-testid="task-due-date">
+                {task.dueDate ? formatDate(task.dueDate, i18n.language) : '—'}
+              </dd>
+            </dl>
+            {!editing && (
+              <div className="row">
+                <button type="button" className="btn btn-small" onClick={() => setEditing(true)} data-testid="task-edit-button">
+                  <Pencil size={16} aria-hidden="true" />
+                  {t('task.edit')}
+                </button>
+                {canDelete && (
+                  <button type="button" className="btn btn-small btn-danger" onClick={() => void onDelete()} data-testid="task-delete-button">
+                    <Trash2 size={16} aria-hidden="true" />
+                    {t('task.delete')}
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+          <AssigneesSection task={task} onChanged={reload} />
+        </div>
+      </div>
     </main>
   );
 }
@@ -153,6 +199,7 @@ function EditTaskForm({
   onCancel: () => void;
   onReload: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? '');
   const [status, setStatus] = useState<TaskStatus>(task.status);
@@ -166,7 +213,7 @@ function EditTaskForm({
     event.preventDefault();
     if (pending) return;
     if (!title.trim()) {
-      setError('O título é obrigatório e não pode ter só espaços.');
+      setError(t('tasks.titleRequired'));
       return;
     }
     setPending(true);
@@ -184,73 +231,76 @@ function EditTaskForm({
       );
     } catch (e) {
       setConflict(e instanceof ApiError && e.status === 409);
-      setError(taskErrorMessage(e));
+      setError(taskErrorMessage(t, e));
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <form className="panel" onSubmit={onSubmit} noValidate data-testid="task-edit-form">
-      <h2>Editar tarefa</h2>
-      <label>
-        Título
-        <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={TASK_TITLE_MAX} data-testid="task-edit-title" />
-      </label>
-      <label>
-        Descrição
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          maxLength={TASK_DESCRIPTION_MAX}
-          rows={4}
-          data-testid="task-edit-description"
-        />
-      </label>
-      <div className="filters">
-        <label>
-          Estado
-          <select value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)} data-testid="task-edit-status">
-            {(['TODO', 'IN_PROGRESS', 'DONE'] as const).map((s) => (
-              <option key={s} value={s}>
-                {taskStatusLabel[s]}
-              </option>
-            ))}
-          </select>
+    <section className="tile" aria-labelledby="edit-task-title">
+      <h2 id="edit-task-title">{t('task.editTitle')}</h2>
+      <form className="form" onSubmit={onSubmit} noValidate data-testid="task-edit-form">
+        <label className="field">
+          {t('tasks.titleLabel')}
+          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={TASK_TITLE_MAX} data-testid="task-edit-title" />
         </label>
-        <label>
-          Prioridade
-          <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} data-testid="task-edit-priority">
-            {(['LOW', 'MEDIUM', 'HIGH'] as const).map((p) => (
-              <option key={p} value={p}>
-                {taskPriorityLabel[p]}
-              </option>
-            ))}
-          </select>
+        <label className="field">
+          {t('tasks.description')}
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={TASK_DESCRIPTION_MAX}
+            rows={4}
+            data-testid="task-edit-description"
+          />
+          <span className="hint">{t('common.chars', { count: description.length, max: TASK_DESCRIPTION_MAX })}</span>
         </label>
-        <label>
-          Data limite
-          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} data-testid="task-edit-due-date" />
-        </label>
-      </div>
-      {error && (
-        <p role="alert" className="error" data-testid="task-edit-error">
-          {error}{' '}
-          {conflict && (
-            <button type="button" onClick={() => void onReload().then(onCancel)}>
-              Recarregar
-            </button>
-          )}
-        </p>
-      )}
-      <div className="actions">
-        <button type="submit" disabled={pending} data-testid="task-edit-submit">
-          {pending ? 'A guardar…' : 'Guardar'}
-        </button>
-        <button type="button" className="secondary" onClick={onCancel} disabled={pending}>
-          Cancelar
-        </button>
-      </div>
-    </form>
+        <div className="field-row">
+          <label className="field">
+            {t('tasks.status')}
+            <select value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)} data-testid="task-edit-status">
+              {(['TODO', 'IN_PROGRESS', 'DONE'] as const).map((s) => (
+                <option key={s} value={s}>
+                  {t(`status.${s}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            {t('tasks.priority')}
+            <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} data-testid="task-edit-priority">
+              {(['LOW', 'MEDIUM', 'HIGH'] as const).map((p) => (
+                <option key={p} value={p}>
+                  {t(`priority.${p}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            {t('tasks.dueDate')}
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} data-testid="task-edit-due-date" />
+          </label>
+        </div>
+        {error && (
+          <Alert kind="error" testId="task-edit-error">
+            {error}{' '}
+            {conflict && (
+              <button type="button" className="link-button" onClick={() => void onReload()}>
+                {t('project.reload')}
+              </button>
+            )}
+          </Alert>
+        )}
+        <div className="row">
+          <button type="submit" className="btn btn-primary" disabled={pending} data-testid="task-edit-submit">
+            {pending ? t('common.saving') : t('common.save')}
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={pending}>
+            {t('common.cancel')}
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }

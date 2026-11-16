@@ -30,7 +30,7 @@ import pt.matriz.web.Problems;
 final class AccountStateFilter extends OncePerRequestFilter {
 
     private static final Set<String> ALLOWED_WHILE_PASSWORD_CHANGE_REQUIRED =
-            Set.of("/auth/me", "/auth/logout", "/auth/password");
+            Set.of("/auth/me", "/auth/logout", "/auth/password", "/auth/me/preferences");
 
     private final AccountService accounts;
     private final ObjectMapper json;

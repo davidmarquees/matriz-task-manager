@@ -13,6 +13,8 @@ interface AuthContextValue {
   login(email: string, password: string): Promise<void>;
   logout(): Promise<void>;
   refresh(): Promise<void>;
+  /** Replaces the user with the one confirmed by the API (e.g. after saving preferences). */
+  setUser(user: CurrentUser): void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -43,6 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       refresh,
+      setUser(user) {
+        setState({ status: 'authenticated', user });
+      },
       async login(email, password) {
         const user = await authApi.login(email, password);
         setState({ status: 'authenticated', user });

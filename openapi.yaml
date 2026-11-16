@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Matriz API
-  version: 0.4.0
+  version: 0.5.0
   license:
     name: Proprietary
   summary: REST API of Matriz, a project and task management application (MVP).
@@ -110,7 +110,7 @@ paths:
         Checks email and password and starts a new session. Wrong email, wrong password, a deactivated
         account and a locked account get the same 401 (D6). After 5 failed attempts in a row the account is
         locked for 15 minutes (D7, A17). When `mustChangePassword` is true, every operation except
-        `getMe`, `logout` and `changeOwnPassword` answers 403 until the password is changed (D45).
+        `getMe`, `logout`, `changeOwnPassword` and `updatePreferences` answers 403 until the password is changed (D45).
         At most 20 login attempts per IP address in 15 minutes; above that the answer is 429.
       security: []
       parameters:
@@ -160,6 +160,47 @@ paths:
           description: Session ended; the session cookie is cleared.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/me/preferences:
+    patch:
+      tags: [Auth]
+      operationId: updatePreferences
+      summary: Save the interface language and theme
+      description: |
+        The authenticated user saves the interface language and theme in their profile (NFR1, NFR8,
+        US13); the choice follows them to other devices. Allowed while a password change is required.
+        Recorded in the user audit log as PREFERENCES_CHANGED with the old and new values (not personal
+        data). Approved for increment 6 on 2026-11-16.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferencesRequest'
+            example:
+              locale: en
+              theme: DARK
+      responses:
+        '200':
+          description: Saved. Returns the user with the new preferences.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -993,6 +1034,18 @@ components:
         password:
           type: string
           maxLength: 100
+
+    PreferencesRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        locale:
+          type: string
+          enum: [pt-PT, en]
+        theme:
+          type: string
+          enum: [LIGHT, DARK, SYSTEM]
 
     PasswordChangeRequest:
       type: object

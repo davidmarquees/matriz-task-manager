@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { ArrowUpRight, FolderOpen, Plus, Search, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link, useLocation } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import {
   createProject,
@@ -10,22 +12,25 @@ import {
   type ProjectPage,
 } from '../api/projects';
 import { useAuth } from '../auth/AuthContext';
-import { TaskCountsLine } from '../components/TaskCountsLine';
-import { projectRoleLabel } from '../labels';
+import { Alert, EmptyState, Skeleton } from '../ui/Bits';
+import { useFeedback } from '../ui/Feedback';
+import { CountsBar } from '../components/CountsBar';
 
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: ProjectPage };
 
-/** Projects screen (Worksheet 03, Ex. 4): list, search by name, pagination and creation. */
+/** Projects (Worksheet 03, Ex. 4 and 7): search by name, pagination, creation for Manager accounts. */
 export function ProjectsPage() {
+  const { t } = useTranslation();
   const { state } = useAuth();
+  const location = useLocation();
   const canCreate = state.status === 'authenticated' && state.user.accountRole === 'MANAGER';
 
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
   const [load, setLoad] = useState<Load>({ status: 'loading' });
+  const [creating, setCreating] = useState(location.hash === '#new');
 
-  // Search after the user stops typing for a moment.
   useEffect(() => {
     const timer = setTimeout(() => {
       setQuery(search);
@@ -34,115 +39,142 @@ export function ProjectsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    if (location.hash === '#new') setCreating(true);
+  }, [location.hash]);
+
   const reload = useCallback(async () => {
-    setLoad({ status: 'loading' });
     try {
       setLoad({ status: 'ready', data: await listProjects(query, page) });
     } catch (e) {
-      if (!(e instanceof ApiError && e.status === 401)) {
-        setLoad({ status: 'error' });
-      }
+      if (!(e instanceof ApiError && e.status === 401)) setLoad({ status: 'error' });
     }
   }, [query, page]);
 
   useEffect(() => {
+    setLoad({ status: 'loading' });
     void reload();
   }, [reload]);
 
   const totalPages = load.status === 'ready' ? Math.max(1, Math.ceil(load.data.totalItems / PAGE_SIZE)) : 1;
 
   return (
-    <main className="page" data-testid="projects-page">
-      <h1>Projetos</h1>
-
-      {canCreate && <CreateProjectForm onCreated={() => (page === 0 ? void reload() : setPage(0))} />}
-
-      <label className="search">
-        Pesquisar por nome
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          maxLength={PROJECT_NAME_MAX}
-          data-testid="project-search"
-        />
-      </label>
-
-      {load.status === 'loading' && <p data-testid="projects-loading">A carregar…</p>}
-      {load.status === 'error' && (
-        <p role="alert" className="error" data-testid="projects-error">
-          Não foi possível carregar os projetos.{' '}
-          <button type="button" onClick={() => void reload()}>
-            Tentar novamente
+    <main className="stack" data-testid="projects-page">
+      <div className="page-head">
+        <div className="page-head-text">
+          <span className="eyebrow">{t('projects.subtitle')}</span>
+          <h1 className="page-title">{t('projects.title')}</h1>
+        </div>
+        {canCreate && !creating && (
+          <button type="button" className="btn btn-primary" onClick={() => setCreating(true)} data-testid="project-create-open">
+            <Plus size={18} aria-hidden="true" />
+            {t('projects.createTitle')}
           </button>
-        </p>
+        )}
+      </div>
+
+      {canCreate && creating && (
+        <CreateProjectForm
+          onCreated={() => (page === 0 ? void reload() : setPage(0))}
+          onClose={() => setCreating(false)}
+        />
       )}
-      {load.status === 'ready' && load.data.items.length === 0 && (
-        <p data-testid="projects-empty">
-          {query.trim() ? 'Nenhum projeto encontrado.' : 'Ainda não pertence a nenhum projeto.'}
-        </p>
-      )}
-      {load.status === 'ready' && load.data.items.length > 0 && (
-        <>
-          <p data-testid="projects-total">
-            {load.data.totalItems} {load.data.totalItems === 1 ? 'projeto' : 'projetos'}
-          </p>
-          <ul className="cards" data-testid="project-list">
-            {load.data.items.map((project) => (
-              <li key={project.id} className="card" data-testid="project-item">
-                <Link to={`/projects/${project.id}`} data-testid="project-link">
-                  <strong>{project.name}</strong>
-                </Link>
-                {project.myRole && <span className="tag">{projectRoleLabel[project.myRole]}</span>}
-                {project.taskCounts && <TaskCountsLine counts={project.taskCounts} />}
-                <span className="muted">
-                  {project.memberCount} {project.memberCount === 1 ? 'membro' : 'membros'}
+
+      <section className="tile">
+        <label className="field" style={{ maxWidth: 420 }}>
+          {t('projects.search')}
+          <span style={{ position: 'relative', display: 'block' }}>
+            <Search size={18} aria-hidden="true" className="search-icon" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              maxLength={PROJECT_NAME_MAX}
+              data-testid="project-search"
+            />
+          </span>
+        </label>
+
+        {load.status === 'loading' && <Skeleton rows={3} label={t('common.loading')} testId="projects-loading" />}
+        {load.status === 'error' && (
+          <Alert kind="error" testId="projects-error">
+            {t('projects.loadError')}{' '}
+            <button type="button" className="link-button" onClick={() => void reload()}>
+              {t('common.retry')}
+            </button>
+          </Alert>
+        )}
+        {load.status === 'ready' && load.data.items.length === 0 && (
+          <EmptyState icon={FolderOpen} title={query.trim() ? t('projects.noResults') : t('projects.none')} testId="projects-empty" />
+        )}
+        {load.status === 'ready' && load.data.items.length > 0 && (
+          <>
+            <p className="eyebrow" data-testid="projects-total">
+              {t('projects.total', { count: load.data.totalItems })}
+            </p>
+            <ul className="list" data-testid="project-list">
+              {load.data.items.map((project) => (
+                <li key={project.id} className="project-row" data-testid="project-item">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                    <Link className="project-name" to={`/projects/${project.id}`} data-testid="project-link">
+                      {project.name}
+                    </Link>
+                    <span className="row" style={{ gap: 8 }}>
+                      {project.myRole && <span className="pill pill-role">{t(`roles.${project.myRole}`)}</span>}
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        {t('dashboard.members', { count: project.memberCount })}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="bars">{project.taskCounts && <CountsBar counts={project.taskCounts} />}</div>
+                  <Link className="arrow-link" to={`/projects/${project.id}`} aria-label={t('dashboard.openProject', { name: project.name })}>
+                    <ArrowUpRight size={18} aria-hidden="true" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {totalPages > 1 && (
+              <nav className="row" aria-label={t('projects.pagination')}>
+                <button type="button" className="btn btn-small" onClick={() => setPage(page - 1)} disabled={page === 0} data-testid="pagination-prev">
+                  {t('projects.previous')}
+                </button>
+                <span className="eyebrow" data-testid="pagination-info">
+                  {t('projects.page', { page: page + 1, total: totalPages })}
                 </span>
-              </li>
-            ))}
-          </ul>
-          {totalPages > 1 && (
-            <nav className="pagination" aria-label="Páginas">
-              <button
-                type="button"
-                onClick={() => setPage(page - 1)}
-                disabled={page === 0}
-                data-testid="pagination-prev"
-              >
-                Anterior
-              </button>
-              <span data-testid="pagination-info">
-                Página {page + 1} de {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPage(page + 1)}
-                disabled={page + 1 >= totalPages}
-                data-testid="pagination-next"
-              >
-                Seguinte
-              </button>
-            </nav>
-          )}
-        </>
-      )}
+                <button
+                  type="button"
+                  className="btn btn-small"
+                  onClick={() => setPage(page + 1)}
+                  disabled={page + 1 >= totalPages}
+                  data-testid="pagination-next"
+                >
+                  {t('projects.next')}
+                </button>
+              </nav>
+            )}
+          </>
+        )}
+      </section>
     </main>
   );
 }
 
-function CreateProjectForm({ onCreated }: { onCreated: () => void }) {
+function CreateProjectForm({ onCreated, onClose }: { onCreated: () => void; onClose: () => void }) {
+  const { t } = useTranslation();
+  const { toast } = useFeedback();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => nameRef.current?.focus(), []);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (pending) return;
-    setSuccess(null);
     if (!name.trim()) {
-      setError('O nome é obrigatório.');
+      setError(t('projects.nameRequired'));
       return;
     }
     setPending(true);
@@ -151,62 +183,63 @@ function CreateProjectForm({ onCreated }: { onCreated: () => void }) {
       const project = await createProject(name, description);
       setName('');
       setDescription('');
-      setSuccess(`Projeto "${project.name}" criado.`);
+      toast(t('projects.created', { name: project.name }));
       onCreated();
     } catch (e) {
-      // The form keeps what was typed (Worksheet 03, Ex. 7).
-      if (e instanceof ApiError && e.fieldCode('name') === 'TOO_LONG') {
-        setError(`O nome pode ter no máximo ${PROJECT_NAME_MAX} caracteres.`);
-      } else if (e instanceof ApiError && e.fieldCode('name')) {
-        setError('O nome é obrigatório.');
-      } else if (e instanceof ApiError && e.fieldCode('description')) {
-        setError(`A descrição pode ter no máximo ${PROJECT_DESCRIPTION_MAX} caracteres.`);
-      } else if (e instanceof ApiError && e.status === 403) {
-        setError('Não tem permissão para criar projetos.');
-      } else if (!(e instanceof ApiError && e.status === 401)) {
-        setError('Não foi possível criar o projeto. Tente novamente.');
-      }
+      // the form keeps what was typed
+      if (e instanceof ApiError && e.status === 401) return;
+      if (e instanceof ApiError && e.fieldCode('name') === 'TOO_LONG') setError(t('projects.nameTooLong', { max: PROJECT_NAME_MAX }));
+      else if (e instanceof ApiError && e.fieldCode('name')) setError(t('projects.nameRequired'));
+      else if (e instanceof ApiError && e.fieldCode('description')) setError(t('projects.descriptionTooLong', { max: PROJECT_DESCRIPTION_MAX }));
+      else if (e instanceof ApiError && e.status === 403) setError(t('projects.noPermission'));
+      else setError(t('projects.createError'));
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <form className="panel" onSubmit={onSubmit} noValidate data-testid="project-create-form">
-      <h2>Novo projeto</h2>
-      <label>
-        Nome
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={PROJECT_NAME_MAX}
-          required
-          data-testid="project-name-input"
-        />
-      </label>
-      <label>
-        Descrição (opcional)
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          maxLength={PROJECT_DESCRIPTION_MAX}
-          rows={3}
-          data-testid="project-description-input"
-        />
-      </label>
-      {error && (
-        <p role="alert" className="error" data-testid="project-create-error">
-          {error}
-        </p>
-      )}
-      {success && (
-        <p role="status" className="success" data-testid="project-create-success">
-          {success}
-        </p>
-      )}
-      <button type="submit" disabled={pending} data-testid="project-create-submit">
-        {pending ? 'A criar…' : 'Criar projeto'}
-      </button>
-    </form>
+    <section className="tile" id="new" aria-labelledby="new-project-title">
+      <div className="row-between">
+        <h2 id="new-project-title">{t('projects.createTitle')}</h2>
+        <button type="button" className="btn btn-small btn-ghost" onClick={onClose} aria-label={t('common.cancel')}>
+          <X size={18} aria-hidden="true" />
+        </button>
+      </div>
+      <form className="form" onSubmit={onSubmit} noValidate data-testid="project-create-form">
+        <label className="field">
+          {t('projects.name')}
+          <input
+            ref={nameRef}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={PROJECT_NAME_MAX}
+            required
+            data-testid="project-name-input"
+          />
+        </label>
+        <label className="field">
+          <span>{t('projects.description')} <span className="hint">({t('common.optional')})</span></span>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={PROJECT_DESCRIPTION_MAX}
+            rows={3}
+            data-testid="project-description-input"
+          />
+          <span className="hint">{t('common.chars', { count: description.length, max: PROJECT_DESCRIPTION_MAX })}</span>
+        </label>
+        {error && (
+          <Alert kind="error" testId="project-create-error">
+            {error}
+          </Alert>
+        )}
+        <div className="row">
+          <button type="submit" className="btn btn-primary" disabled={pending} data-testid="project-create-submit">
+            {pending ? t('projects.creating') : t('projects.create')}
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }

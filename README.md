@@ -135,9 +135,12 @@ Integration tests use Testcontainers: each test class starts its own empty Postg
 
 ```bash
 cd frontend
+npm test
 npm run build
 ```
 
+Frontend tests use Vitest and Testing Library in a simulated browser (jsdom); they mock the API, so they need no backend.
+
 ## Current status
 
-Implementation (Worksheet 03). Done: increment 1 (project skeleton, database schema and demo data) increment 2 (authentication and access rules), increment 3 (projects and members) and increment 4 (tasks, with the "last change" note) and increment 5 (assignees and comments). See [docs/implementation-plan.md](docs/implementation-plan.md).
+Implementation (Worksheet 03). Done: increment 1 (project skeleton, database schema and demo data) increment 2 (authentication and access rules), increment 3 (projects and members) and increment 4 (tasks, with the "last change" note) increment 5 (assignees and comments) and increment 6 (complete interface: approved design, PT/EN, light/dark/auto themes, mobile). See [docs/implementation-plan.md](docs/implementation-plan.md).
