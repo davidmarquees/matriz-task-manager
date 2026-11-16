@@ -1,29 +1,38 @@
-import { useEffect, useState } from 'react';
-import { API_URL } from './api/config';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from './auth/AuthContext';
+import { RequireAuth } from './auth/RequireAuth';
+import { AppHeader } from './components/AppHeader';
+import { ChangePasswordPage } from './pages/ChangePasswordPage';
+import { HomePage } from './pages/HomePage';
+import { LoginPage } from './pages/LoginPage';
 
-type BackendState = 'checking' | 'up' | 'down';
-
-// Skeleton screen for increment 1: shows the app name and whether the backend answers.
-// The real screens (login, dashboard, projects, tasks) come in the next increments.
 export function App() {
-  const [backend, setBackend] = useState<BackendState>('checking');
-
-  useEffect(() => {
-    fetch(`${API_URL}/actuator/health`)
-      .then((response) => setBackend(response.ok ? 'up' : 'down'))
-      .catch(() => setBackend('down'));
-  }, []);
-
-  const label = {
-    checking: 'A verificar a ligação ao servidor…',
-    up: 'Servidor disponível',
-    down: 'Servidor indisponível',
-  }[backend];
-
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: '1rem' }}>
-      <h1 data-testid="app-title">Matriz</h1>
-      <p data-testid="backend-status">{label}</p>
-    </main>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/change-password"
+            element={
+              <RequireAuth>
+                <AppHeader />
+                <ChangePasswordPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/"
+            element={
+              <RequireAuth>
+                <AppHeader />
+                <HomePage />
+              </RequireAuth>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

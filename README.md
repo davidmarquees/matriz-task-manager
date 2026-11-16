@@ -73,6 +73,7 @@ Change the passwords in `.env`. `.env.example` has fictitious values only; never
 | `MATRIZ_DB_APP_USER`, `MATRIZ_DB_APP_PASSWORD` | Compose, backend | Application user at runtime; `INSERT` and `SELECT` only on the logs |
 | `MATRIZ_DB_URL` | Backend | JDBC URL, e.g. `jdbc:postgresql://localhost:5432/matriz` |
 | `MATRIZ_SERVER_PORT` | Backend | HTTP port (default 8080) |
+| `MATRIZ_COOKIE_SECURE` | Backend | `true` sends the session and CSRF cookies over HTTPS only; `false` only for local HTTP development |
 | `MATRIZ_PROFILE` | Backend | `dev` adds the demo data; leave empty in production |
 | `MATRIZ_ADMIN_NAME`, `MATRIZ_ADMIN_EMAIL`, `MATRIZ_ADMIN_PASSWORD` | Backend | Admin account created at the first start if none exists |
 | `MATRIZ_DEMO_PASSWORD` | Backend (`dev`) | Password of the two demo accounts |
@@ -106,6 +107,15 @@ npm run dev
 
 Open <http://localhost:5173>. Calls to `/api` go through the Vite proxy to the backend.
 
+### Session lifecycle
+
+Authentication uses a server-side session (Spring Security), described in `openapi.yaml` (API description, "Session lifecycle"):
+
+1. `GET /api/auth/me` without a session answers 401 and sets the `XSRF-TOKEN` cookie (readable by the SPA, `SameSite=Lax`).
+2. `POST /api/auth/login` with `{email, password}` and the token in the `X-XSRF-TOKEN` header. On success the server creates a new session (`JSESSIONID`, HttpOnly, `SameSite=Lax`) and a new CSRF token. Every failure gets the same 401 ("Invalid email or password."). 5 failures in a row lock the account for 15 minutes; more than 20 attempts from one IP address in 15 minutes get 429.
+3. Every later request sends the session cookie; POST, PATCH and DELETE also send `X-XSRF-TOKEN`. The account status is read from the database on every request; a deactivated account gets 401. While a password change is required, everything except `me`, `logout` and `password` gets 403.
+4. The session ends with `POST /api/auth/logout`, after 30 minutes of inactivity, or when the user changes the password in another session (`POST /api/auth/password` ends every other session). Sessions are kept in memory, so restarting the backend ends them all. The interface then shows the login page with "A sessão expirou".
+
 ### Demo accounts (`dev` profile only, fictitious data)
 
 | Account | Email | Password | Access |
@@ -130,4 +140,4 @@ npm run build
 
 ## Current status
 
-Implementation (Worksheet 03). Done: increment 1, project skeleton, database schema and demo data. See [docs/implementation-plan.md](docs/implementation-plan.md).
+Implementation (Worksheet 03). Done: increment 1 (project skeleton, database schema and demo data) and increment 2 (authentication and access rules). See [docs/implementation-plan.md](docs/implementation-plan.md).

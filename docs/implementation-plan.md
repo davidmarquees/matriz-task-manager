@@ -128,7 +128,7 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 |---|---|---|---|---|
 | 0 | Ex. 1 | This plan, decisions, full contract, doc fixes | Done (2026-11-16) | Redocly CLI lint: valid, 0 errors, 2 accepted warnings (`localhost` server URL, intended for local development; `info-license-strict`, because a proprietary licence has no SPDX identifier or public URL); local YAML and `$ref` check: 22 operations, no missing references; commit `docs: add implementation plan, complete API contract and reconcile docs with Worksheet 03 scope` |
 | 1 | Ex. 2 | Skeleton, persistence, seed | Done (2026-11-16) | [verification.md](verification.md) V-01 to V-06; `./mvnw verify` 16 tests passed; commit pending |
-| 2 | Ex. 3 | Authentication and access rules | Not started | — |
+| 2 | Ex. 3 | Authentication and access rules | Done (2026-11-16) | [verification.md](verification.md) V-07 to V-14; `./mvnw verify` 34 tests passed; commit pending |
 | 3 | Ex. 4 | Projects and members | Not started | — |
 | 4 | Ex. 5 | Tasks, filters, dashboard counts | Not started | — |
 | 5 | Ex. 6 | Assignees and comments | Not started | — |
@@ -161,6 +161,12 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 - **Components:** security config (session, CSRF, JSON login, 401/403 handlers), lockout, `/auth/me`, membership check helper used by every later service; contract for auth; frontend login page, route guard, session-expired message, header with log out.
 - **Acceptance:** US1; D6, D7, D8; Admin bootstrap works; password hashes only.
 - **Checks:** integration tests: valid login, wrong password, unknown email (same error), no session → 401, lockout after 5; manual login/logout in the browser.
+- **As implemented (2026-11-16, approved by David):**
+  - Added to the scope: own password change `POST /auth/password` (FR1e, D46 to D48; ends the other sessions and changes the session id); login rate limit per IP address, 20 attempts in 15 minutes, then 429 with `Retry-After` (in memory); `SameSite=Lax` on both cookies; `Secure` flag from `MATRIZ_COOKIE_SECURE`; generic login messages also in the interface; message when the new password equals the current one (David's request).
+  - Contract `openapi.yaml` 0.3.0: `changeOwnPassword`, 429 on `login`, error codes `WRONG_PASSWORD` and `SAME_AS_CURRENT`.
+  - Backend: `security` (SecurityConfig, AuthController, AccountStateFilter for D8 and D45, LoginRateLimiter, SPA CSRF handler, session registry), `accounts` (User entity, AccountService with lockout), `audit` (UserAuditLog writer), `projects` (ProjectAccess: 404 for non-members, 403 for Members), `web` (Problem Details for every error).
+  - Frontend: central API client (cookies, CSRF header, 401 → "A sessão expirou"), AuthContext, protected routes, login, change-password page, header with log out, temporary home page; texts in pt-PT only (translations in Ex. 7); `react-router-dom` 7.18.5.
+  - Deferred: automated test of the 30-minute session timeout.
 
 ### Increment 3 — Projects and members (Ex. 4)
 - **Components:** projects module (service, repository, controller), members, activity-log writer (same transaction), contract; frontend project list with search, create/edit form, detail, delete confirmation, members screen.
