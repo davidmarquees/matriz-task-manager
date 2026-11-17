@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Matriz API
-  version: 0.7.0
+  version: 0.8.0
   license:
     name: Proprietary
   summary: REST API of Matriz, a project and task management application (MVP).
@@ -2008,12 +2008,16 @@ components:
                     example: title
                   code:
                     type: string
-                    description: Machine-readable rule; the frontend maps it to a message in the user's language.
-                    enum: [REQUIRED, TOO_SHORT, TOO_LONG, BLANK, INVALID_VALUE, INVALID_DATE, DUPLICATE, NOT_A_PROJECT_MEMBER, USER_NOT_ELIGIBLE, WRONG_PASSWORD, SAME_AS_CURRENT, INVALID_TOKEN]
+                    description: >-
+                      Machine-readable rule; the frontend maps it to a message in the user's language.
+                      `INVALID_CHARACTER` (D49): the text has a control character (U+0000 to U+001F or U+007F).
+                      Titles, names and emails accept none; descriptions and comments accept only tab, line feed
+                      and carriage return.
+                    enum: [REQUIRED, TOO_SHORT, TOO_LONG, BLANK, INVALID_CHARACTER, INVALID_VALUE, INVALID_DATE, DUPLICATE, NOT_A_PROJECT_MEMBER, USER_NOT_ELIGIBLE, WRONG_PASSWORD, SAME_AS_CURRENT, INVALID_TOKEN]
 
   responses:
     BadRequest:
-      description: Malformed request (invalid JSON, unknown field, non-numeric id, or a NUL character U+0000 in any text or parameter). A wrong type or null is 422.
+      description: Malformed request (invalid JSON, unknown field, non-numeric id, or a NUL character U+0000 in a parameter or a field that is not a validated text, such as a search or a login email). A wrong type or null is 422; a control character in a title, name, email, description or comment is 422 INVALID_CHARACTER (D49).
       content:
         application/problem+json:
           schema:

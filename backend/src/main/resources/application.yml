@@ -29,7 +29,7 @@ spring:
     hibernate:
       ddl-auto: validate
   mail:
-    # Development: Mailpit (docker-compose.yml), no real emails are sent
+    # Development: Mailpit (compose.yaml), no real emails are sent
     host: ${MATRIZ_MAIL_HOST:localhost}
     port: ${MATRIZ_MAIL_PORT:1025}
     username: ${MATRIZ_MAIL_USERNAME:}

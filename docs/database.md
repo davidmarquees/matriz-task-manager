@@ -383,7 +383,7 @@ Responses: **400** malformed request (invalid JSON, unknown field, non-numeric i
 | D13 | Member added twice to a project, including at the same time | Refused | DB PK | 409 |
 | D14 | Adding or appointing a deactivated user or the Admin account | Refused | backend | 422 |
 | D15 | Removed member added again | Allowed: new membership row; old assignments are not restored | DB PK (old row was deleted) | 201 |
-| D16 | Removing or demoting the last Manager (E6), including two Managers demoting each other at the same time | Refused | backend, with a row lock on the project | 409 |
+| D16 | Removing or demoting the last Manager (E6), including two Managers demoting each other at the same time | Refused. When two Managers demote each other at once, one succeeds; the other gets 409, or 403 if the first change was already saved when the request was checked (they are no longer a Manager, D10) | backend, with a row lock on the project | 409 (403) |
 | D17 | Non-member opens a project, task or comment by URL or API (E4) | Refused without revealing content | backend (membership check on every request) | 404 |
 | D18 | Removed member still has a page open | Next request refused | backend (membership not cached in the session) | 404 |
 | D19 | Reactivated user logs in | Sees no projects until added again (FR4) | backend | 200 |
@@ -400,6 +400,7 @@ Responses: **400** malformed request (invalid JSON, unknown field, non-numeric i
 | D25 | Two users edit the same task or project at the same time | Second save refused; the user reloads and retries | DB `version` column (optimistic locking) | 409 |
 | D26 | Task or project deleted while another user is viewing, editing or commenting | The next request finds nothing | DB | 404 |
 | D27 | Moving a task to another project | Not allowed in the MVP: `projectId` is not an accepted field in an update | API validation | 400 |
+| D49 | Control character (U+0000 to U+001F or U+007F) in a text field | Titles, project and account names, and emails created by the Admin accept none; task and project descriptions and comments accept only tab, line feed and carriage return. Spaces at the edges are trimmed first (A6). Approved by David, 2026-11-17 (Worksheet 05) | backend (`TextInput`) | 422 `INVALID_CHARACTER` |
 
 ### System failures
 

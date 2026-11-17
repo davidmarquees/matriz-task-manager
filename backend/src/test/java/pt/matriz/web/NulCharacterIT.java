@@ -36,9 +36,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import pt.matriz.PostgresTestDatabase;
 
 /**
- * Regression tests for finding Q-6 (docs/quality-security-review.md): a NUL character (U+0000) in any input
- * is a malformed request (400 Problem, contract "BadRequest"), never a 500, and nothing is saved.
- * The JSON bodies below contain the escape sequence \u0000, as a client would send it.
+ * Regression tests for finding Q-6 (docs/quality-security-review.md): a NUL character (U+0000) never gets a 500
+ * and nothing is saved. In a text field it is a control character, refused with 422 INVALID_CHARACTER (D49,
+ * Worksheet 05); in other inputs (search, login and reset email) it is a malformed request (400, "BadRequest").
+ * The JSON bodies below contain JSON escape sequences such as \u0000, as a client would send them.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -80,17 +81,35 @@ class NulCharacterIT {
     }
 
     @Test
-    void aNulCharacterInATaskOrProjectTextIsAMalformedRequest() throws Exception {
-        expect400(send(post("/projects/" + projectId + "/tasks"), manager, "{\"title\":\"ab" + NUL + "cd\"}"));
-        expect400(send(post("/projects/" + projectId + "/tasks"), manager, "{\"title\":\"" + NUL + "abcd\"}"));
-        expect400(send(post("/projects"), manager, "{\"name\":\"ab" + NUL + "cd\"}"));
+    void aNulCharacterInATaskOrProjectTextIsRefusedAsAnInvalidCharacter() throws Exception {
+        expectInvalidCharacter(send(post("/projects/" + projectId + "/tasks"), manager, "{\"title\":\"ab" + NUL + "cd\"}"), "title");
+        expectInvalidCharacter(send(post("/projects/" + projectId + "/tasks"), manager, "{\"title\":\"" + NUL + "abcd\"}"), "title");
+        expectInvalidCharacter(send(post("/projects"), manager, "{\"name\":\"ab" + NUL + "cd\"}"), "name");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM tasks WHERE project_id = ?", Integer.class, projectId))
                 .isZero();
 
         long taskId = json.readTree(send(post("/projects/" + projectId + "/tasks"), manager, "{\"title\":\"Original\"}")
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
-        expect400(send(patch("/tasks/" + taskId), manager, "{\"version\":0,\"title\":\"ab" + NUL + "cd\"}"));
+        expectInvalidCharacter(send(patch("/tasks/" + taskId), manager, "{\"version\":0,\"title\":\"ab" + NUL + "cd\"}"), "title");
         assertThat(jdbc.queryForObject("SELECT title FROM tasks WHERE id = ?", String.class, taskId)).isEqualTo("Original");
+    }
+
+    @Test
+    void otherControlCharactersFollowTheSingleAndMultiLineRules() throws Exception { // T32, D49
+        String tasks = "/projects/" + projectId + "/tasks";
+        expectInvalidCharacter(send(post(tasks), manager, "{\"title\":\"ab\\u0007cd\"}"), "title");
+        expectInvalidCharacter(send(post(tasks), manager, "{\"title\":\"Line\\nbreak\"}"), "title");
+        expectInvalidCharacter(send(post(tasks), manager, "{\"title\":\"Valid\",\"description\":\"a\\u001Bb\"}"), "description");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM tasks WHERE project_id = ?", Integer.class, projectId))
+                .isZero();
+
+        long taskId = json.readTree(send(post(tasks), manager, "{\"title\":\"Valid\",\"description\":\"line 1\\n\\tline 2\"}")
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
+        assertThat(jdbc.queryForObject("SELECT description FROM tasks WHERE id = ?", String.class, taskId))
+                .isEqualTo("line 1\n\tline 2");
+        send(post("/tasks/" + taskId + "/comments"), manager, "{\"body\":\"first\\r\\nsecond\"}")
+                .andExpect(status().isCreated());
+        expectInvalidCharacter(send(post("/tasks/" + taskId + "/comments"), manager, "{\"body\":\"a\\u0007b\"}"), "body");
     }
 
     @Test
@@ -111,6 +130,12 @@ class NulCharacterIT {
         result.andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(400));
+    }
+
+    private void expectInvalidCharacter(ResultActions result, String field) throws Exception {
+        result.andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].field").value(field))
+                .andExpect(jsonPath("$.errors[0].code").value("INVALID_CHARACTER"));
     }
 
     private ResultActions send(MockHttpServletRequestBuilder request, MockHttpSession session, String body) throws Exception {

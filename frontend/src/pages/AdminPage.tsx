@@ -45,6 +45,7 @@ function adminMessageKey(e: unknown): string | null {
   }
   if (e.fieldCode('initialPassword') === 'TOO_SHORT') return 'password.tooShort';
   if (e.fieldCode('initialPassword') === 'TOO_LONG') return 'password.tooLong';
+  if (e.fieldCode('name') === 'INVALID_CHARACTER') return 'common.invalidCharacters'; // D49
   if (e.fieldCode('email')) return 'admin.invalidEmail';
   if (e.fieldCode('name') === 'TOO_LONG') return 'admin.nameTooLong';
   if (e.status === 422) return 'admin.fillAll';

@@ -86,7 +86,11 @@ class ConcurrencyIT {
                     () -> code(send(patch("/projects/" + project + "/members/" + userId(jdbc, aEmail)), b,
                             "{\"projectRole\":\"MEMBER\"}")));
 
-            assertThat(statuses).containsExactlyInAnyOrder(200, 409);
+            // One demotion wins (200); the other is refused: 409 LAST_MANAGER when both passed the Manager check
+            // before the first one was saved, 403 when the first one was already saved (no longer a Manager, D10).
+            // Which one happens depends on timing (seen in CI: [200, 403]).
+            assertThat(statuses).as("statuses in round %d", round).hasSize(2).contains(200);
+            assertThat(statuses).filteredOn(s -> s != 200).singleElement().isIn(403, 409);
             assertThat(jdbc.queryForObject("SELECT count(*) FROM project_members WHERE project_id = ? "
                     + "AND project_role = 'MANAGER'", Integer.class, project)).isEqualTo(1);
         }

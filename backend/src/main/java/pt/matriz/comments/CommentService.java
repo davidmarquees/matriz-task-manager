@@ -57,11 +57,11 @@ public class CommentService {
                 .toList();
     }
 
-    /** 1 to 2,000 characters after trimming, not only spaces (D20); written to the activity log without the text. */
+    /** 1 to 2,000 characters after trimming, not only spaces (D20), no control characters except tab and line breaks (D49); written to the activity log without the text. */
     @Transactional
     public Comment add(AuthenticatedUser user, long taskId, String body) {
         long projectId = tasks.requireTaskAccess(user, taskId);
-        String text = TextInput.required(body, "body", 1, BODY_MAX);
+        String text = TextInput.requiredMultiLine(body, "body", 1, BODY_MAX);
         ProjectAccess.LockedProject project = access.lock(projectId);
         Integer stillThere = jdbc.queryForObject("SELECT count(*) FROM tasks WHERE id = ?", Integer.class, taskId);
         if (stillThere == null || stillThere == 0) {

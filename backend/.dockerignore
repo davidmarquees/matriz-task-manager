@@ -1,0 +1,8 @@
+# Only the Maven Wrapper, pom.xml and src/ are needed to build the image
+target/
+.env
+.env.*
+*.iml
+.idea/
+.vscode/
+.DS_Store

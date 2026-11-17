@@ -80,4 +80,37 @@ class TextInputTest {
         assertThat(withEmoji.codePointCount(0, withEmoji.length())).isEqualTo(MAX);
         assertThat(title(withEmoji)).isEqualTo(withEmoji);
     }
+
+    @Test
+    void refusesControlCharactersInsideASingleLineTitle() { // T32, D49
+        assertRefused("ab\u0000cd", "INVALID_CHARACTER");
+        assertRefused("ab\u0007cd", "INVALID_CHARACTER");
+        assertRefused("ab\u001Bcd", "INVALID_CHARACTER");
+        assertRefused("ab\u007Fcd", "INVALID_CHARACTER");
+        assertRefused("ab\tcd", "INVALID_CHARACTER");
+        assertRefused("ab\ncd", "INVALID_CHARACTER");
+        assertRefused("\u0000abcd", "INVALID_CHARACTER"); // not a space, so not trimmed
+    }
+
+    @Test
+    void stillTrimsSpacesAndLineBreaksAtTheEdgesOfATitle() { // T32: edges are trimmed before the check (A6)
+        assertThat(title("\tabc\n")).isEqualTo("abc");
+    }
+
+    @Test
+    void acceptsCharactersJustOutsideTheControlRanges() { // T32: U+0020 and U+00A0 are spaces, U+0080 is not refused
+        assertThat(title("a b\u00A0c\u0080d")).isEqualTo("a b\u00A0c\u0080d");
+    }
+
+    @Test
+    void multiLineTextKeepsTabAndLineBreaksButRefusesOtherControlCharacters() { // T32, D49: descriptions, comments
+        assertThat(TextInput.optional("line 1\r\n\tline 2", "description", 2000)).isEqualTo("line 1\r\n\tline 2");
+        assertThat(TextInput.requiredMultiLine("a\nb", "body", 1, 2000)).isEqualTo("a\nb");
+        assertThatThrownBy(() -> TextInput.optional("a\u0007b", "description", 2000))
+                .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.errors())
+                        .containsExactly(new ApiException.FieldError("description", "INVALID_CHARACTER")));
+        assertThatThrownBy(() -> TextInput.requiredMultiLine("a\u0000b", "body", 1, 2000))
+                .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.errors())
+                        .containsExactly(new ApiException.FieldError("body", "INVALID_CHARACTER")));
+    }
 }

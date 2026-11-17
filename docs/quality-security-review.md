@@ -13,7 +13,8 @@
 | Q-4 | A new task created with assignees already has a `lastChange`, so it shows "Alterada hoje" instead of "Criada" | `backend/src/main/java/pt/matriz/tasks/TaskService.java` (`create` records `ASSIGNEE` / `ADDED` entries; `lastChangesOf` counts every `ASSIGNEE` entry as a change) | First run of `TaskCreateAndReadIT.memberCreatesATaskThatIsReturnedSavedAndReadBack` on 2026-11-17: `lastChange` was not null right after `createTask` with `assigneeIds`. A task created without assignees gets `null` (`aNewTaskWithoutAssigneesHasNoLastChange` passes). The contract (`Task.lastChange`) says "null when the task was never changed", and US15 says a never-changed task shows "Criada" | Wrong "last change" note (and, for Managers, a "who changed it" detail) on every task created with assignees; the creation date is hidden | Medium | Fix approved by David (2026-11-17) | Fixed (regression test passes) |
 | Q-5 | When the title is missing, the create form shows an error message, but the title input itself is not marked as invalid (no `aria-invalid`, no link to the message) | `frontend/src/components/TasksSection.tsx` (`CreateTaskForm`: error in `Alert` `task-create-error`) | Code reading during Ex. 4; the E2E test checks the message only. axe (accessibility spec) passed, but it does not check this state | Screen-reader users may not know which field is wrong (US3 asks for the title field to be flagged) | Low | Fix approved by David (2026-11-17) | Fixed (regression test passes) |
 | Q-6 | Text with a NUL character (U+0000) gets 500 instead of 422 in every text field (task title, project name, comment, …) | `backend/src/main/java/pt/matriz/web/TextInput.java` (no check for U+0000; PostgreSQL `text`/`varchar` cannot store it) | Ex. 5, on the isolated app (:8081): `POST /api/projects/1/tasks` with title `ab\u0000cd` → 500, with `\u0000abcd` → 500; `POST /api/projects` with name `ab\u0000cd` → 500. Server log: `PSQLException: invalid byte sequence for encoding "UTF8": 0x00`. The answer is the generic Problem (no internal details, NFR5 holds). A NUL in the middle already failed before this worksheet; a leading or trailing NUL was removed by `String.trim()` and became 500 with the Q-1 fix (regression of this worksheet) | Invalid input is reported as a server error instead of a field error (D20, contract 422); error logs filled by any client; no data is exposed or saved | Low | Fix approved by David (2026-11-17), option A: central, 400 | Fixed (regression test passes) |
-| Q-3 | The task title field in the interface limits the length in UTF-16 units, so a 150-character title with an emoji cannot be typed in full | `frontend/src/components/TasksSection.tsx` (`maxLength={TASK_TITLE_MAX}` on `task-title-input`) | Code reading only: the HTML `maxlength` attribute counts UTF-16 code units. Not reproduced in a browser | Same as Q-2, in the interface only; the API now accepts the title | Low | Recorded, not fixed (David, 2026-11-17) | Suspicion |
+| Q-7 | Test problem (not an application defect): `ConcurrencyIT.twoManagersDemotingEachOtherAtOnceLeaveOneManager` expected exactly `[200, 409]`, but the second request can also get 403 | `backend/src/test/java/pt/matriz/ConcurrencyIT.java` (assertion); `MemberService.changeRole` checks the Manager role before locking the project | Worksheet 05, Ex. 4: the CI run on the pull request failed with `[200, 403]`; the same commit passed on push and locally. When the first demotion is saved before the second request is checked, its author is no longer a Manager (D10) | Flaky pipeline; the rule E6/D16 held (the request was refused and one Manager remained) | Low | Fix of the test and clarification of D16 approved by David (2026-11-17) | Fixed (test accepts 409 or 403; still checks one Manager left) |
+| Q-3 | The task title field in the interface limits the length in UTF-16 units, so a 150-character title with an emoji cannot be typed in full | `frontend/src/components/TasksSection.tsx` (`maxLength={TASK_TITLE_MAX}` on `task-title-input`) | Code reading only: the HTML `maxlength` attribute counts UTF-16 code units. Not reproduced in a browser | Same as Q-2, in the interface only; the API now accepts the title | Low | Recorded in Worksheet 04; fix approved by David (2026-11-17, Worksheet 05) | Fixed (regression tests pass) |
 
 Fix of Q-1 and Q-2 (2026-11-17, approved by David): `TextInput` trims and detects blank text using `Character.isWhitespace` or `Character.isSpaceChar`, so Unicode spaces such as U+00A0 count as spaces, and it counts lengths in code points. The helper is shared, so the same rule now applies to task titles and descriptions, project names and descriptions, comments, and account names and emails created by the Admin. Regression tests: `TextInputTest.refusesATitleMadeOnlyOfNonBreakingSpaces` and `.countsAnEmojiAsOneCharacter`, no longer `@Disabled`. Not changed: the database `CHECK` (`btrim` trims only ASCII spaces), which would need a migration; the backend check enforces the rule (NFR4).
 
@@ -29,13 +30,47 @@ Scope: production changes of this worksheet (`TextInput`, `TaskService.lastChang
 
 | Item | Observation | Type | Outcome |
 |---|---|---|---|
-| `TextInput.trim` | Removes Unicode spaces as intended, but control characters below U+0020 that are not whitespace (U+0000 to U+0008, U+000E to U+001B) are no longer removed at the edges | Fact (code + probe) | U+0000 → finding Q-6. Other control characters (e.g. U+0007) are accepted and stored: the requirements say nothing about them, so this is not a finding. **Pending decision** (David, 2026-11-17): no rule is added until the requirements define one |
+| `TextInput.trim` | Removes Unicode spaces as intended, but control characters below U+0020 that are not whitespace (U+0000 to U+0008, U+000E to U+001B) are no longer removed at the edges | Fact (code + probe) | U+0000 → finding Q-6. Other control characters (e.g. U+0007) are accepted and stored: the requirements say nothing about them, so this is not a finding. **Decided** (David, 2026-11-17, Worksheet 05): rule D49 in [database.md](database.md), 422 `INVALID_CHARACTER`; see "Worksheet 05: Q-3 and control characters" below |
 | `lastChangesOf` (Q-4 fix) | Relies on the creation entries sharing one transaction timestamp (`now()`) | Hypothesis | Holds today (one `@Transactional` method); would break if creation were split into several transactions. Covered by the regression test `TaskCreateAndReadIT.aNewTaskWithAssigneesHasNoLastChange`. No action |
 | `backend/pom.xml` | Surefire `<skip>${skipUTs}</skip>`, Failsafe `integration-test` + `verify`; `-DskipTests` skips both | Fact | No problem |
 | Tests | No test of the Unicode rules (Q-1, Q-2) or of NUL through the API, or for project names, comments and account fields | Fact | Missing tests; one would be added with the Q-6 fix |
 | Frontend | `CreateTaskForm` checks the minimum length with `String.length` (UTF-16), so "a😀" passes the form and the API answers 422 `TOO_SHORT` (shown as an error) | Fact (code reading) | Same cause as Q-3; recorded there |
 
-## Ex. 5: Security Review, access to projects and tasks (2026-11-17)
+## Worksheet 05: Q-3 and control characters (2026-11-17)
+
+Both fixes approved by David before Worksheet 05, Ex. 2, on branch `chore/delivery`.
+
+- **Q-3 (frontend):** the task title fields (create form and edit form) no longer use the HTML `maxlength` attribute, which counts UTF-16 units. A new helper `frontend/src/text.ts` (`charCount`, `limitChars`) counts and cuts by code points, as the API does; the create form also checks the minimum with it. Regression tests in `TasksSection.test.tsx`: both failed without the fix (`maxlength` still present; "a😀" sent to the API) and pass with it. Other fields with `maxLength` (descriptions, comments, project names, search) keep the attribute: their limits are long, and the same UTF-16 cut can only happen near the limit with emoji. Not changed (outside Q-3).
+- **Control characters (rule D49):** `TextInput` refuses U+0000 to U+001F and U+007F with 422 `INVALID_CHARACTER`. Single-line text (task titles, project names, account names and emails created by the Admin) accepts none; multi-line text (task and project descriptions, comments: new `TextInput.requiredMultiLine`) accepts tab, line feed and carriage return. Edges are trimmed first, as before (A6). New code in `openapi.yaml` (`INVALID_CHARACTER`) and one message in the interface (pt-PT and en) for every form that sends these fields.
+- **Effect on Q-6:** a NUL character in those text fields is now 422 `INVALID_CHARACTER` (refused before it reaches the database), not 400. A NUL in other inputs (search `q`, login and reset email) still gets 400 from the central handler. `NulCharacterIT` was updated accordingly and has a fourth test for the other control characters.
+- Not changed: the database `CHECK` constraints (the backend enforces the rule, NFR4); passwords and search terms (not text that is stored or shown).
+
+## Worksheet 05, Ex. 4: Semgrep and image scan (2026-11-17)
+
+Both run in the CI pipeline (`.github/workflows/ci.yml`) from their official Docker images, pinned: `semgrep/semgrep:1.185.0` and `aquasec/trivy:0.76.2`. First runs on the developer's machine:
+
+- **Semgrep** (`p/java`, `p/typescript`, `p/react`): 94 files scanned, 0 findings. The pipeline fails on any finding (`--error`).
+- **Trivy** (HIGH and CRITICAL with a published fix, on the Compose images), before the fixes:
+  - Frontend (nginx-unprivileged, Alpine 3.24.2): 13 in Alpine packages (brotli, curl, libexpat, libxslt, musl, zlib). Fix: `apk upgrade --no-cache` in `frontend/Dockerfile`. After: 0.
+  - Backend: 14 in Java libraries. `tomcat-embed-core` 10.1.55 (5 CRITICAL, 1 HIGH), `jackson-core`/`jackson-databind` 2.21.4 (5 HIGH), `postgresql` 42.7.11 (1 HIGH): fixed by overriding the Spring Boot managed versions in `backend/pom.xml` (`tomcat.version` 10.1.62, `jackson-bom.version` 2.21.8, `postgresql.version` 42.7.12); all backend tests pass (unit 13, integration 97). After: 2.
+  - **Accepted for now** (David, 2026-11-17): CVE-2026-47884 and CVE-2026-47890 (CRITICAL) in `spring-webmvc` 6.2.19. It is the last Spring Framework 6.2 release, and Spring Boot 3.5.16 the last 3.5 release; the fix exists only in Spring Framework 7.0.9 (Spring Boot 4), a migration outside this worksheet. Listed in `.trivyignore.yaml` with an expiry date (2027-02-17), after which the pipeline fails again. **Impact on Matriz not analysed.**
+- The image scan also covers the backend's Java dependencies (inside `app.jar`), which had no audit before (Worksheet 04, "Backend dependencies: not checked").
+
+## Worksheet 05, Ex. 6: final review (2026-11-17)
+
+Review by the AI agent of the delivery setup (Dockerfiles, `nginx.conf`, `compose.yaml`, workflow, README and docs against the code, test results), on a clean clone of `chore/delivery` (`2ec4a98`). Decisions by David.
+
+| # | Finding | Evidence | Severity | Decision | Status |
+|---|---|---|---|---|---|
+| F-1 | Pages and files served by nginx had no security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`), so the interface could be framed (clickjacking); the API already had them from Spring Security | `curl -I http://localhost:8088/`: none of the three headers | Medium | Fix approved | Fixed: `frontend/security-headers.inc`, included in every nginx location; `curl -I` shows them on `/`, `/assets/…` and SPA routes |
+| F-2 | `compose.yaml` published PostgreSQL (5432) and Mailpit (1025, 8025) on every network interface, reachable from the local network | Port mappings `0.0.0.0:5432` in `docker compose ps` | Medium | Fix approved | Fixed: bound to `127.0.0.1`; port 5432 refused on the machine's network address, accepted on `127.0.0.1` |
+| F-3 | Every push to a branch with an open pull request ran the pipeline twice (`push` and `pull_request`) | Pairs of checks `(push)` / `(pull_request)` on the pull request | Low | Fix approved | Fixed: `push` only on `main`; pull requests to `main` still run it |
+| F-4 | GitHub Actions are pinned by version tag (`@v7`), not by commit SHA | `.github/workflows/ci.yml` | Low | Recorded only | Open (limitation) |
+
+**Dependency audit in CI (2026-11-17, after the final review).** The pull request run of the Ex. 6 commit failed at `npm audit --audit-level=high`: advisory GHSA-fc5q-39xc-vjpf (HIGH, ReDoS) in `picomatch` ≤ 4.0.7, with no patched version. `picomatch` comes only through `vite` and `vitest`, development dependencies (build and tests), and is not in the code sent to the browser: `npm audit --omit=dev` reports 0 vulnerabilities. The fix suggested by npm (`audit fix --force`, Vitest 3.1.4) would bring back the critical advisories avoided in Worksheet 03 (ai-usage #6). **Decision (David, 2026-11-17):** the pipeline blocks on production dependencies (`npm audit --omit=dev --audit-level=high`); the full audit still runs and is shown in the log, without blocking. Accepted until `picomatch` publishes a fix.
+
+Other checks with no finding: no credentials in tracked files or history (`gitleaks` 8.30.1 over 42 commits: no leaks; `git grep` for secret patterns: none; no `.env`, key or certificate tracked); images run as non-root; health checks on every service; logs of a fresh start and of the E2E runs had no WARN or ERROR.
+
 
 **Code reading.** Every task, assignee and comment operation first loads the task's project and calls `requireProjectMember` (404 for non-members, 403 for the Admin); every project change calls `ProjectAccess.requireManager` (404 non-member, 403 Member or Admin); the activity log calls `requireManager`. Identity (`createdBy`, comment author) comes from the session; unknown fields are refused (400). Membership is read from the database on each request (not cached in the session).
 
@@ -86,13 +121,17 @@ No static analysis tool is configured in the project (no ESLint, Semgrep, SpotBu
 | 2026-11-17 | Q-6, without the fix: `./mvnw verify -DskipUTs -Dit.test=NulCharacterIT` | 3 tests, 3 failures (`Status expected:<400> but was:<500>`) |
 | 2026-11-17 | Q-6, with the fix: `cd backend && ./mvnw verify` | Unit 9 tests, 0 failures; integration 96 tests, 0 failures, 0 skipped; `BUILD SUCCESS` |
 | 2026-11-17 | Contract: `npx --yes @redocly/cli@latest lint openapi.yaml` | Valid; 2 warnings, the same as before the change |
+| 2026-11-17 | Worksheet 05, Q-3, without the fix: `npx vitest run src/test/TasksSection.test.tsx` | 5 tests, 2 failures (the two Q-3 tests) |
+| 2026-11-17 | Worksheet 05, Q-3 and D49: `cd frontend && npm test && npm run build` | 23 tests passed; build OK |
+| 2026-11-17 | Worksheet 05, D49: `cd backend && ./mvnw verify` | Unit 13 tests, 0 failures; integration 97 tests, 0 failures, 0 skipped; `BUILD SUCCESS` |
+| 2026-11-17 | Worksheet 05: contract lint after `INVALID_CHARACTER` | Valid; 2 warnings, the same as before |
 
 ## Not checked
 
 - Q-1 and Q-2 through the API (only the unit level and the full suite were run). In the interface, JavaScript `trim()` already removes U+00A0, so Q-1 could only be reached through the API (code reading).
-- Q-3 in a browser.
+- Q-3 and D49 in a browser (component and integration tests only; E2E not run for these fixes).
 - Q-4 in the interface (expected: "Alterada hoje" on a new task created with assignees), and whether adding an assignee in the same request as an update is affected.
 - Project names, comments and account fields with Unicode spaces or emoji: they use the same helper, but no test of their own.
 - Security beyond access to projects and tasks (session handling, rate limit, password reset) was reviewed in Worksheet 03, not again here.
-- No SAST on the Java code (Semgrep planned for Worksheet 05).
+- No SAST on the Java code (Semgrep planned for Worksheet 05). Done in Worksheet 05, Ex. 4 (see above).
 - Q-6 fix on the running isolated app (checked with the integration test only).

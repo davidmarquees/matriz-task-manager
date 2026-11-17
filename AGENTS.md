@@ -20,7 +20,8 @@ Configuration comes from `.env` (copy `.env.example`; fictitious values only). J
 
 | Purpose | Command |
 |---|---|
-| Database and local mail catcher (PostgreSQL 16, Mailpit UI on :8025) | `docker compose up -d` |
+| Database and local mail catcher for development (PostgreSQL 16, Mailpit UI on :8025) | `docker compose up -d db mail` |
+| Whole application in containers (web on :8088) | `docker compose up -d --build` |
 | Backend: schema (Flyway), dev seed and API on :8080/api | `cd backend && ./mvnw spring-boot:run` |
 | Frontend on :5173 (proxy `/api` → backend) | `cd frontend && npm install && npm run dev` |
 | Backend unit tests (`*Test`; no Docker) | `cd backend && ./mvnw test` |
