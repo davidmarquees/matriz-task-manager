@@ -234,6 +234,7 @@ function EditProjectForm({
       if (e instanceof ApiError && e.status === 401) return;
       setConflict(e instanceof ApiError && e.status === 409);
       if (e instanceof ApiError && e.status === 409) setError(t('project.conflict'));
+      else if (e instanceof ApiError && (e.fieldCode('name') === 'INVALID_CHARACTER' || e.fieldCode('description') === 'INVALID_CHARACTER')) setError(t('common.invalidCharacters')); // D49
       else if (e instanceof ApiError && e.fieldCode('name') === 'TOO_LONG') setError(t('projects.nameTooLong', { max: PROJECT_NAME_MAX }));
       else if (e instanceof ApiError && e.fieldCode('name')) setError(t('projects.nameRequired'));
       else if (e instanceof ApiError && e.fieldCode('description')) setError(t('projects.descriptionTooLong', { max: PROJECT_DESCRIPTION_MAX }));

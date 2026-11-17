@@ -49,7 +49,8 @@ export function CommentsSection({ taskId }: { taskId: number }) {
     } catch (e) {
       // the text is kept so it can be sent again
       if (e instanceof ApiError && e.status === 401) return;
-      if (e instanceof ApiError && e.fieldCode('body') === 'TOO_LONG') setError(t('comments.tooLong', { max: COMMENT_MAX }));
+      if (e instanceof ApiError && e.fieldCode('body') === 'INVALID_CHARACTER') setError(t('common.invalidCharacters')); // D49
+      else if (e instanceof ApiError && e.fieldCode('body') === 'TOO_LONG') setError(t('comments.tooLong', { max: COMMENT_MAX }));
       else if (e instanceof ApiError && e.fieldCode('body')) setError(t('comments.blank'));
       else if (e instanceof ApiError && e.status === 404) setError(t('comments.gone'));
       else setError(t('comments.error'));

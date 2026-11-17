@@ -400,6 +400,7 @@ Responses: **400** malformed request (invalid JSON, unknown field, non-numeric i
 | D25 | Two users edit the same task or project at the same time | Second save refused; the user reloads and retries | DB `version` column (optimistic locking) | 409 |
 | D26 | Task or project deleted while another user is viewing, editing or commenting | The next request finds nothing | DB | 404 |
 | D27 | Moving a task to another project | Not allowed in the MVP: `projectId` is not an accepted field in an update | API validation | 400 |
+| D49 | Control character (U+0000 to U+001F or U+007F) in a text field | Titles, project and account names, and emails created by the Admin accept none; task and project descriptions and comments accept only tab, line feed and carriage return. Spaces at the edges are trimmed first (A6). Approved by David, 2026-11-17 (Worksheet 05) | backend (`TextInput`) | 422 `INVALID_CHARACTER` |
 
 ### System failures
 

@@ -12,6 +12,7 @@ export const ptPT = {
     back: 'Voltar',
     optional: 'opcional',
     genericError: 'Não foi possível concluir a operação. Tente novamente.',
+    invalidCharacters: 'O texto contém caracteres não permitidos.',
     sessionEnded: 'A sessão terminou.',
     removedUser: 'Utilizador removido',
     leftCompany: '{{name}} (saiu da empresa)',

@@ -21,6 +21,7 @@ import {
   type TaskStatus,
 } from '../api/tasks';
 import { formatDate, userLabel } from '../labels';
+import { charCount, limitChars } from '../text';
 import { Alert, EmptyState, PriorityPill, Skeleton } from '../ui/Bits';
 import { useFeedback } from '../ui/Feedback';
 import { LastChangeNote } from './LastChangeNote';
@@ -36,6 +37,9 @@ export function taskErrorMessage(t: TFunction, e: unknown): string | null {
   if (e.status === 401) return null;
   if (e.status === 409) return t('tasks.conflict');
   if (e.status === 404) return t('tasks.gone');
+  if (e.fieldCode('title') === 'INVALID_CHARACTER' || e.fieldCode('description') === 'INVALID_CHARACTER') {
+    return t('common.invalidCharacters'); // D49
+  }
   const title = e.fieldCode('title');
   if (title === 'BLANK' || title === 'REQUIRED') return t('tasks.titleRequired');
   if (title === 'TOO_SHORT') return t('tasks.titleTooShort', { min: TASK_TITLE_MIN });
@@ -346,7 +350,7 @@ function CreateTaskForm({ projectId, onCreated, onClose }: { projectId: number; 
       titleRef.current?.focus();
       return;
     }
-    if (trimmed.length < TASK_TITLE_MIN) {
+    if (charCount(trimmed) < TASK_TITLE_MIN) {
       setError(t('tasks.titleTooShort', { min: TASK_TITLE_MIN }));
       setTitleInvalid(true);
       titleRef.current?.focus();
@@ -392,8 +396,7 @@ function CreateTaskForm({ projectId, onCreated, onClose }: { projectId: number; 
         <input
           ref={titleRef}
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          maxLength={TASK_TITLE_MAX}
+          onChange={(e) => setTitle(limitChars(e.target.value, TASK_TITLE_MAX))} // not maxLength: it counts UTF-16 units (Q-3)
           aria-invalid={titleInvalid ? true : undefined}
           aria-describedby={titleInvalid && error ? 'task-create-error' : undefined}
           data-testid="task-title-input"

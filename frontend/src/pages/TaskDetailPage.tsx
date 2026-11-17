@@ -15,6 +15,7 @@ import {
   type TaskStatus,
 } from '../api/tasks';
 import { useAuth } from '../auth/AuthContext';
+import { limitChars } from '../text';
 import { AssigneesSection } from '../components/AssigneesSection';
 import { CommentsSection } from '../components/CommentsSection';
 import { LastChangeNote } from '../components/LastChangeNote';
@@ -243,7 +244,11 @@ function EditTaskForm({
       <form className="form" onSubmit={onSubmit} noValidate data-testid="task-edit-form">
         <label className="field">
           {t('tasks.titleLabel')}
-          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={TASK_TITLE_MAX} data-testid="task-edit-title" />
+          <input
+            value={title}
+            onChange={(e) => setTitle(limitChars(e.target.value, TASK_TITLE_MAX))} // not maxLength: it counts UTF-16 units (Q-3)
+            data-testid="task-edit-title"
+          />
         </label>
         <label className="field">
           {t('tasks.description')}

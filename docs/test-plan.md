@@ -60,8 +60,11 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | T27 | GET a task or POST to a project that does not exist | 404, same body as for a foreign task (apart from `instance`); nothing saved | E4, D17 | I | `TaskCreateAndReadIT.aMissingTaskOrProjectLooksTheSameAsAForeignOne` | Covered (passed 2026-11-17) |
 | T28 | New task: without assignees; with assignees | `lastChange` is null in both cases (never changed; US15 "Criada") | FR14, US15, openapi `Task.lastChange` | I | `TaskCreateAndReadIT.aNewTaskWithoutAssigneesHasNoLastChange`; `.aNewTaskWithAssigneesHasNoLastChange` | Covered: regression test for finding Q-4, fixed 2026-11-17 |
 | T29 | Submit the create form with a title of only spaces (interface) | Error "O título é obrigatório…" shown, form kept, nothing saved (still empty after a reload) | US3 | E2E | `task-create.spec.ts` "a task without a title is not created and the title is flagged as mandatory" | Covered (passed 2026-11-17) |
-| T30 | A NUL character (U+0000) in a task title, project name, PATCH, search `q`, login or reset email | 400 Problem, nothing saved (never 500) | BadRequest (openapi.yaml), D28, NFR5 | I | `NulCharacterIT` (3 tests) | Covered: regression test for finding Q-6, fixed 2026-11-17 |
+| T30 | A NUL character (U+0000) in a task title, project name, PATCH, search `q`, login or reset email | Never 500, nothing saved: 422 `INVALID_CHARACTER` in a text field (D49, since Worksheet 05), 400 Problem in search and login or reset email | BadRequest (openapi.yaml), D28, D49, NFR5 | I | `NulCharacterIT` (3 tests) | Covered: regression test for finding Q-6, fixed 2026-11-17; expectations for text fields changed with D49 |
 | T31 | Create form with a title of only spaces (component) | Title input has `aria-invalid="true"` and is described by the error message; no request sent | US3 | C | `TasksSection.test.tsx` "flags the title field as invalid…" | Covered: regression test for finding Q-5, fixed 2026-11-17 |
+| T32 | Control characters: U+0007, U+001B, U+007F, tab or line feed inside a title; U+0007 in a description or comment; tab and line breaks in a description or comment | Refused with 422 `INVALID_CHARACTER` on the field, nothing saved; tab and line breaks kept in multi-line text | D49 | U, I | `TextInputTest` (4 tests); `NulCharacterIT.otherControlCharactersFollowTheSingleAndMultiLineRules` | Covered (Worksheet 05, 2026-11-17) |
+| T33 | Task title in the interface: 150 characters with an emoji; 151 characters; "a😀" | Kept whole; cut to 150 characters; refused as too short without a request (FR5 counts characters) | FR5, Q-3 | C | `TasksSection.test.tsx` "counts an emoji as one character…", "refuses a title of two characters…" | Covered: regression tests for finding Q-3, fixed 2026-11-17 (Worksheet 05) |
+| T34 | API answers 422 `INVALID_CHARACTER` on the create form | Message "O texto contém caracteres não permitidos." and the title flagged | D49 | C | `TasksSection.test.tsx` "shows the invalid-character message…" | Covered (Worksheet 05, 2026-11-17) |
 
 ### 2.4 Malformed requests and failures
 
@@ -83,7 +86,7 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 ## 4. Not covered by this plan (limits)
 
 - Performance with 50 users and 1,000 tasks (NFR2), browsers other than Chrome, and security beyond access control (e.g. dependency vulnerabilities) are not proved by these tests. They are recorded as not verified.
-- The two Unicode suspicions of Ex. 1 (T25) were confirmed at unit level in Ex. 2: findings Q-1 and Q-2 in [quality-security-review.md](quality-security-review.md). Both were fixed on 2026-11-17 (approved by David). The interface limit (Q-3) stays recorded, not fixed.
+- The two Unicode suspicions of Ex. 1 (T25) were confirmed at unit level in Ex. 2: findings Q-1 and Q-2 in [quality-security-review.md](quality-security-review.md). Both were fixed on 2026-11-17 (approved by David). The interface limit (Q-3) was recorded in Worksheet 04 and fixed at the start of Worksheet 05 (T33).
 - Areas outside tasks and permissions (accounts, password reset, logs, dashboard) are covered by the Worksheet 03 tests listed in [verification.md](verification.md) and are not repeated here.
 
 ## 5. Results by exercise
@@ -102,3 +105,4 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | Ex. 5: static | `cd frontend && npm audit`; `npm run build`; `npm test` | 0 vulnerabilities; build OK; 19 tests passed |
 | Ex. 5: fix Q-5 | `cd frontend && npm test && npm run build` | 20 tests passed; build OK |
 | Ex. 5: fix Q-6 | `cd backend && ./mvnw verify` | Unit 9; integration 96; 0 failures, 0 skipped; `BUILD SUCCESS` |
+| Worksheet 05: Q-3, D49 | `cd backend && ./mvnw verify`; `cd frontend && npm test && npm run build` | Unit 13; integration 97; 0 failures, 0 skipped; `BUILD SUCCESS`. Frontend 23 tests passed; build OK |

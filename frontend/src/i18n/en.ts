@@ -14,6 +14,7 @@ export const en: typeof ptPT = {
     back: 'Back',
     optional: 'optional',
     genericError: 'The operation could not be completed. Please try again.',
+    invalidCharacters: 'The text contains characters that are not allowed.',
     sessionEnded: 'The session ended.',
     removedUser: 'Removed user',
     leftCompany: '{{name}} (left the company)',
