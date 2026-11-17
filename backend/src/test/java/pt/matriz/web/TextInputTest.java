@@ -30,7 +30,7 @@ class TextInputTest {
 
     @Test
     void acceptsAValidTitle() { // T4
-        assertThat(title("Fix login")).isEqualTo("Fix login (controlled CI failure)"); // TEMPORARY: Worksheet 05, Ex. 4
+        assertThat(title("Fix login")).isEqualTo("Fix login");
     }
 
     @Test
