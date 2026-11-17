@@ -39,7 +39,7 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | # | Input | Expected | Source | Level | Associated test | Status |
 |---|---|---|---|---|---|---|
 | T6★ | Member creates `{title}` in their project, then `GET /tasks/{id}` | 201 with `Location`; status TODO, priority MEDIUM, `createdBy` = session user; GET 200 with the same data; row in the database | US3, A5, FR5 | I | `TasksApiIT.memberCreatesATaskWithDefaultsThatIsSavedAndReadBack`; `TaskCreateAndReadIT.memberCreatesATaskThatIsReturnedSavedAndReadBack` (all fields, `Location`, GET, database, list) | Covered (passed 2026-11-17) |
-| T7★ | Log in → open project → create task | The task appears in `task-list` (`task-item`) | US3, Ex. 4 | E2E | `main-flow.spec.ts` "a Manager and a Member work on the same task" | Partial (dedicated flow in Ex. 4) |
+| T7★ | Log in → open project → create task | The task appears in `task-list` (`task-item`) | US3, Ex. 4 | E2E | `task-create.spec.ts` "a Manager creates a task and sees it in the project list" (labels in pt-PT, "Criada hoje", still listed after a reload); `main-flow.spec.ts` | Covered (passed 2026-11-17) |
 | T13 | Create with `createdBy` in the body | 400 (identity comes from the session) | Plan §4 | I | `TasksApiIT.refusesInvalidTaskData` | Covered |
 | T15 | PATCH with an old `version` | 409 `VERSION_CONFLICT` | D25 | I | `TasksApiIT.anyMemberEditsAndStaleOrEmptyChangesAreHandled` | Covered |
 | T20 | Assignee who is not a member, unknown or deactivated; the same assignee twice | Not a member, unknown or deactivated: 422 `NOT_A_PROJECT_MEMBER`. Already assigned: 409 `ALREADY_ASSIGNED`. Repeated id in `assigneeIds` on create: 422 `DUPLICATE` | FR8, D21, D22 | I | `TasksApiIT.assigneesMustBeActiveProjectMembers`, `AssigneesAndCommentsApiIT.onlyEligibleUsersCanBeAssigned`, `.severalAssigneesWithoutDuplicatesAndRemovableOneByOne`, `ConcurrencyIT.theSamePersonAssignedTwiceAtOnceIsSavedOnce` | Partial (deactivated user not checked) |
@@ -59,6 +59,7 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | T19 | Task creator removed from the project tries to delete their task; a Manager deletes it | 404 for the former member; 204 for the Manager | D24 | I | — | Planned (Ex. 3 or Ex. 5) |
 | T27 | GET a task or POST to a project that does not exist | 404, same body as for a foreign task (apart from `instance`); nothing saved | E4, D17 | I | `TaskCreateAndReadIT.aMissingTaskOrProjectLooksTheSameAsAForeignOne` | Covered (passed 2026-11-17) |
 | T28 | New task: without assignees; with assignees | `lastChange` is null in both cases (never changed; US15 "Criada") | FR14, US15, openapi `Task.lastChange` | I | `TaskCreateAndReadIT.aNewTaskWithoutAssigneesHasNoLastChange`; `.aNewTaskWithAssigneesHasNoLastChange` | Covered: regression test for finding Q-4, fixed 2026-11-17 |
+| T29 | Submit the create form with a title of only spaces (interface) | Error "O título é obrigatório…" shown, form kept, nothing saved (still empty after a reload) | US3 | E2E | `task-create.spec.ts` "a task without a title is not created and the title is flagged as mandatory" | Covered (passed 2026-11-17) |
 
 ### 2.4 Malformed requests and failures
 
@@ -93,3 +94,5 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | Ex. 3: integration | `cd backend && ./mvnw verify -DskipUTs -Dit.test=TaskCreateAndReadIT` | 7 tests, 0 failures, 1 skipped (Q-4) |
 | Ex. 3: full backend | `cd backend && ./mvnw verify` | Unit 9 tests, 0 failures; integration 93 tests, 0 failures, 1 skipped (Q-4); `BUILD SUCCESS` |
 | Ex. 3: fix Q-4 | `cd backend && ./mvnw verify` | Unit 9 tests, 0 failures; integration 93 tests, 0 failures, 0 skipped; `BUILD SUCCESS` |
+| Ex. 4: E2E (isolated app: backend :8081 on database `matriz_e2e`, Vite :5174) | `cd frontend && set -a && source ../.env && set +a && MATRIZ_E2E_URL=http://localhost:5174 npx playwright test e2e/task-create.spec.ts` | Run 1: 2 passed; run 2: 2 passed (repeatable; no test project left in the database) |
+| Ex. 4: all E2E, same app | `... npx playwright test` | 6 passed, 1 skipped (`admin.spec.ts`, needs `MATRIZ_E2E_ADMIN_PASSWORD`) |

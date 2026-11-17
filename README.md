@@ -167,7 +167,7 @@ set -a; source ../.env; set +a
 npm run e2e
 ```
 
-`MATRIZ_E2E_URL` changes the address (default <http://localhost:5173>). Many runs in a row reach the login rate limit (20 per 15 minutes); for a local test backend start it with `MATRIZ_LOGIN_RATELIMIT_MAXATTEMPTS=1000`. The HTML report is in `frontend/playwright-report` (git-ignored).
+One spec only: `npx playwright test e2e/task-create.spec.ts`. `MATRIZ_E2E_URL` changes the address (default <http://localhost:5173>); to keep the development database clean, run a second backend on another port with its own database and point a second Vite server at it (`MATRIZ_BACKEND_URL=http://localhost:8081 npx vite --port 5174`, then `MATRIZ_E2E_URL=http://localhost:5174`). Many runs in a row reach the login rate limit (20 per 15 minutes); for a local test backend start it with `MATRIZ_LOGIN_RATELIMIT_MAXATTEMPTS=1000`. The HTML report is in `frontend/playwright-report` (git-ignored).
 
 ## Current status
 
