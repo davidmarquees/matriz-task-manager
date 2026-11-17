@@ -38,7 +38,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Rules that must hold when two users act at the same instant (docs/database.md D16, D21): the
+ * Rules that must hold when two users act at the same instant (docs/database.md D5, D16, D21): the
  * requests are released together from separate threads, repeated a few times.
  */
 @SpringBootTest
@@ -109,6 +109,28 @@ class ConcurrencyTest {
             assertThat(statuses).containsExactlyInAnyOrder(201, 409);
             assertThat(jdbc.queryForObject("SELECT count(*) FROM task_assignees WHERE task_id = ?", Integer.class, task))
                     .isEqualTo(1);
+        }
+    }
+
+    @Test
+    void deactivatingAManagerWhileTheOtherIsDemotedNeverLeavesAProjectWithoutManager() throws Exception { // D5, D16
+        jdbc.update("UPDATE users SET must_change_password = false WHERE account_role = 'ADMIN'");
+        for (int round = 0; round < ROUNDS * 2; round++) {
+            MockHttpSession admin = login(mvc, "admin@example.test", "test-admin-password");
+            String aEmail = createUser(jdbc, encoder, "MANAGER", "stay-a");
+            String bEmail = createUser(jdbc, encoder, "MANAGER", "stay-b");
+            MockHttpSession a = login(mvc, aEmail, PASSWORD);
+            long project = createdId(send(post("/projects"), a, "{\"name\":\"Keep a Manager " + round + "\"}"));
+            send(post("/projects/" + project + "/members"), a, "{\"email\":\"" + bEmail + "\",\"projectRole\":\"MANAGER\"}");
+
+            List<Integer> statuses = atTheSameTime(
+                    () -> code(send(post("/admin/users/" + userId(jdbc, aEmail) + "/deactivate"), admin, "{}")),
+                    () -> code(send(patch("/projects/" + project + "/members/" + userId(jdbc, bEmail)), a,
+                            "{\"projectRole\":\"MEMBER\"}")));
+
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM project_members WHERE project_id = ? "
+                    + "AND project_role = 'MANAGER'", Integer.class, project))
+                    .as("Managers left in round %d, statuses %s", round, statuses).isGreaterThanOrEqualTo(1);
         }
     }
 

@@ -128,6 +128,32 @@ class PasswordResetTest {
     }
 
     @Test
+    void deactivationInvalidatesPendingLinks() throws Exception { // Ex. 9 R-4
+        String user = createUser(jdbc, encoder, "MEMBER", "leaving");
+        request(user);
+        String token = sentToken(user);
+        jdbc.update("UPDATE users SET must_change_password = false WHERE account_role = 'ADMIN'");
+        MockHttpSession admin = login(mvc, "admin@example.test", "test-admin-password");
+        long id = jdbc.queryForObject("SELECT id FROM users WHERE email = ?", Long.class, user);
+
+        mvc.perform(post("/admin/users/" + id + "/deactivate").session(admin).with(csrf())).andExpect(status().isOk());
+        mvc.perform(post("/admin/users/" + id + "/reactivate").session(admin).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"initialPassword\":\"set-by-admin\"}"))
+                .andExpect(status().isOk());
+
+        confirm(token, "my-own-new-pass").andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].code").value("INVALID_TOKEN"));
+        login(mvc, user, "set-by-admin"); // the Admin's initial password still applies
+    }
+
+    @Test
+    void anEmailLongerThanTheContractAllowsIsRefused() throws Exception { // openapi.yaml maxLength 254 (Ex. 9 R-3)
+        request("a".repeat(250) + "@example.test").andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].code").value("TOO_LONG"));
+        verify(email, never()).send(anyString(), anyString(), anyString());
+    }
+
+    @Test
     void aMailServerFailureGivesTheSameAnswer() throws Exception { // D36
         String user = createUser(jdbc, encoder, "MEMBER", "offline");
         doThrow(new IllegalStateException("SMTP down")).when(email).send(anyString(), anyString(), anyString());

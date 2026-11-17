@@ -56,6 +56,9 @@ public class AdminService {
         if (status != null && !status.isBlank() && !List.of("ACTIVE", "DEACTIVATED", "ANONYMISED").contains(status)) {
             throw ApiException.invalid("status", "INVALID_VALUE");
         }
+        if (q != null && q.length() > 100) {
+            throw ApiException.invalid("q", "TOO_LONG"); // openapi.yaml maxLength
+        }
         String pattern = q == null || q.isBlank() ? null
                 : "%" + q.trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
         return jdbc.query("""
@@ -111,11 +114,15 @@ public class AdminService {
         if (user.getId() == admin.id() || (user.getAccountRole() == User.AccountRole.ADMIN && activeAdmins() <= 1)) {
             throw ApiException.conflict("LAST_ADMIN"); // D4
         }
+        members.lockProjectsOf(userId); // before the check, so a parallel demotion cannot slip in (D5)
         if (!members.projectsWhereOnlyManager(userId).isEmpty()) {
             throw ApiException.conflict("ONLY_MANAGER"); // D5: appoint another Manager first
         }
         members.removeAllMemberships(userId, admin.id());
-        user.deactivate(OffsetDateTime.now(clock));
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        // pending reset links stop working, so a later reactivation starts from the Admin's password
+        jdbc.update("UPDATE password_reset_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL", now, userId);
+        user.deactivate(now);
         audit.record(admin.id(), userId, "ACCOUNT_DEACTIVATED", null, null, Map.of("status", "ACTIVE"), Map.of("status", "DEACTIVATED"));
         users.flush();
         return find(userId);

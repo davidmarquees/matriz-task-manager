@@ -164,6 +164,16 @@ public class MemberService {
         return member(projectId, account.id());
     }
 
+    /**
+     * Locks every project the user belongs to, in id order, until the end of the transaction (D5, D16):
+     * a role change or removal in those projects waits, so the "only Manager" check stays true.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockProjectsOf(long userId) {
+        jdbc.queryForList("SELECT p.id FROM projects p JOIN project_members m ON m.project_id = p.id "
+                + "WHERE m.user_id = ? ORDER BY p.id FOR UPDATE OF p", Long.class, userId);
+    }
+
     /** Projects where this user is the only Manager (D5: deactivation refused until another is appointed). */
     @Transactional(readOnly = true)
     public List<Long> projectsWhereOnlyManager(long userId) {

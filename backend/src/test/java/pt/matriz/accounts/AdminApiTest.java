@@ -162,6 +162,13 @@ class AdminApiTest {
     }
 
     @Test
+    void searchTextLongerThanTheContractAllowsIsRefused() throws Exception { // openapi.yaml maxLength 100 (Ex. 9 R-3)
+        mvc.perform(get("/admin/users").param("q", "x".repeat(101)).session(admin))
+                .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.errors[0].code").value("TOO_LONG"));
+        mvc.perform(get("/admin/users").param("q", "x".repeat(100)).session(admin)).andExpect(status().isOk());
+    }
+
+    @Test
     void theAdminCannotDeactivateTheirOwnAccount() throws Exception { // D4
         long adminId = userId(jdbc, "admin@example.test");
         send(post("/admin/users/" + adminId + "/deactivate"), admin, "{}")

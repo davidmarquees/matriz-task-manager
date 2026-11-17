@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
@@ -32,10 +34,18 @@ class HealthEndpointTest {
     @Autowired
     TestRestTemplate http;
 
+    @Autowired
+    ApplicationContext context;
+
     @Test
     void healthIsUpWithoutDetails() {
         ResponseEntity<String> response = http.getForEntity("/actuator/health", String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("{\"status\":\"UP\"}");
+    }
+
+    @Test
+    void thereIsNoDefaultInMemoryUser() { // Ex. 9 review R-2: no generated password in the log
+        assertThat(context.getBeansOfType(UserDetailsService.class)).isEmpty();
     }
 }

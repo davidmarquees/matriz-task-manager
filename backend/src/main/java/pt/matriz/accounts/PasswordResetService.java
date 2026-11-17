@@ -71,6 +71,9 @@ public class PasswordResetService {
         if (emailAddress == null || emailAddress.isBlank()) {
             throw ApiException.invalid("email", "REQUIRED");
         }
+        if (emailAddress.length() > 254) {
+            throw ApiException.invalid("email", "TOO_LONG"); // openapi.yaml maxLength; says nothing about accounts
+        }
         Optional<User> found = users.findByEmailIgnoreCase(emailAddress.trim()).filter(User::isActive);
         if (found.isEmpty()) {
             return; // D30: same answer, no email
