@@ -1,0 +1,11 @@
+# Installed and built inside the image
+node_modules/
+dist/
+# Tests and reports not needed to build
+test-results/
+playwright-report/
+*.tsbuildinfo
+.vite/
+.env
+.env.*
+.DS_Store
