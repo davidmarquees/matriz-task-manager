@@ -12,6 +12,10 @@ RUN npm run build
 
 # --- Runtime stage: nginx without root (listens on 8080) ---
 FROM nginxinc/nginx-unprivileged:alpine
+# Security fixes of the Alpine packages newer than the base image (Trivy, Worksheet 05, Ex. 4)
+USER root
+RUN apk upgrade --no-cache
+USER nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 8080

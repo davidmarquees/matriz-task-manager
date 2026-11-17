@@ -1,0 +1,128 @@
+# Continuous integration of Matriz (Worksheet 05, Ex. 4).
+# Order: install dependencies -> unit and integration tests, frontend tests, contract lint, static analysis
+# -> application builds -> Docker images (only after every check above passed) -> image scan and smoke test.
+# End-to-end tests (Playwright) run locally: see README, "End-to-end and accessibility tests".
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# Least privilege: the jobs only read the repository. No secrets are used.
+permissions:
+  contents: read
+
+# A newer run on the same branch or pull request cancels the older one
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests (unit and integration)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Unit tests (*Test, Surefire)
+        run: ./mvnw -B test
+      - name: Integration tests (*IT, Failsafe + Testcontainers) and package
+        run: ./mvnw -B verify -DskipUTs
+      - name: Keep test reports when a test fails
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-test-reports
+          path: |
+            backend/target/surefire-reports/
+            backend/target/failsafe-reports/
+          retention-days: 7
+
+  frontend:
+    name: Frontend tests, build and audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Component tests (Vitest)
+        run: npm test
+      - name: Type-checked build
+        run: npm run build
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+  contract:
+    name: API contract lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Lint openapi.yaml (Redocly)
+        run: npx --yes @redocly/cli@2.79.0 lint openapi.yaml
+
+  semgrep:
+    name: Static analysis (Semgrep)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Semgrep, public Java, TypeScript and React rules (fails on any finding)
+        run: >-
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:1.185.0
+          semgrep scan --config p/java --config p/typescript --config p/react --metrics=off --error
+
+  docker:
+    name: Docker images, scan and smoke test
+    needs: [backend, frontend, contract, semgrep]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configuration with the fictitious values of .env.example
+        run: cp .env.example .env
+      - name: Validate compose.yaml
+        run: docker compose config -q
+      - name: Build the images
+        run: docker compose build
+      - name: Scan the images (Trivy; HIGH and CRITICAL with a fix fail, except .trivyignore.yaml)
+        run: |
+          for image in matriz-backend:local matriz-frontend:local; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore.yaml:/work/.trivyignore.yaml:ro" \
+              aquasec/trivy:0.76.2 image --severity HIGH,CRITICAL --ignore-unfixed \
+              --ignorefile /work/.trivyignore.yaml --exit-code 1 "$image"
+          done
+      - name: Start the application and wait until every service is healthy
+        run: docker compose up -d --wait --wait-timeout 180
+      - name: Smoke test through nginx
+        run: |
+          curl -fsS http://localhost:8088/api/actuator/health
+          curl -fsS -o /dev/null http://localhost:8088/
+          docker compose ps
+      - name: Logs when something failed
+        if: failure()
+        run: docker compose logs --tail=100
+      - name: Stop the application
+        if: always()
+        run: docker compose down -v

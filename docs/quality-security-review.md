@@ -44,6 +44,17 @@ Both fixes approved by David before Worksheet 05, Ex. 2, on branch `chore/delive
 - **Effect on Q-6:** a NUL character in those text fields is now 422 `INVALID_CHARACTER` (refused before it reaches the database), not 400. A NUL in other inputs (search `q`, login and reset email) still gets 400 from the central handler. `NulCharacterIT` was updated accordingly and has a fourth test for the other control characters.
 - Not changed: the database `CHECK` constraints (the backend enforces the rule, NFR4); passwords and search terms (not text that is stored or shown).
 
+## Worksheet 05, Ex. 4: Semgrep and image scan (2026-11-17)
+
+Both run in the CI pipeline (`.github/workflows/ci.yml`) from their official Docker images, pinned: `semgrep/semgrep:1.185.0` and `aquasec/trivy:0.76.2`. First runs on the developer's machine:
+
+- **Semgrep** (`p/java`, `p/typescript`, `p/react`): 94 files scanned, 0 findings. The pipeline fails on any finding (`--error`).
+- **Trivy** (HIGH and CRITICAL with a published fix, on the Compose images), before the fixes:
+  - Frontend (nginx-unprivileged, Alpine 3.24.2): 13 in Alpine packages (brotli, curl, libexpat, libxslt, musl, zlib). Fix: `apk upgrade --no-cache` in `frontend/Dockerfile`. After: 0.
+  - Backend: 14 in Java libraries. `tomcat-embed-core` 10.1.55 (5 CRITICAL, 1 HIGH), `jackson-core`/`jackson-databind` 2.21.4 (5 HIGH), `postgresql` 42.7.11 (1 HIGH): fixed by overriding the Spring Boot managed versions in `backend/pom.xml` (`tomcat.version` 10.1.62, `jackson-bom.version` 2.21.8, `postgresql.version` 42.7.12); all backend tests pass (unit 13, integration 97). After: 2.
+  - **Accepted for now** (David, 2026-11-17): CVE-2026-47884 and CVE-2026-47890 (CRITICAL) in `spring-webmvc` 6.2.19. It is the last Spring Framework 6.2 release, and Spring Boot 3.5.16 the last 3.5 release; the fix exists only in Spring Framework 7.0.9 (Spring Boot 4), a migration outside this worksheet. Listed in `.trivyignore.yaml` with an expiry date (2027-02-17), after which the pipeline fails again. **Impact on Matriz not analysed.**
+- The image scan also covers the backend's Java dependencies (inside `app.jar`), which had no audit before (Worksheet 04, "Backend dependencies: not checked").
+
 ## Ex. 5: Security Review, access to projects and tasks (2026-11-17)
 
 **Code reading.** Every task, assignee and comment operation first loads the task's project and calls `requireProjectMember` (404 for non-members, 403 for the Admin); every project change calls `ProjectAccess.requireManager` (404 non-member, 403 Member or Admin); the activity log calls `requireManager`. Identity (`createdBy`, comment author) comes from the session; unknown fields are refused (400). Membership is read from the database on each request (not cached in the session).
@@ -107,5 +118,5 @@ No static analysis tool is configured in the project (no ESLint, Semgrep, SpotBu
 - Q-4 in the interface (expected: "Alterada hoje" on a new task created with assignees), and whether adding an assignee in the same request as an update is affected.
 - Project names, comments and account fields with Unicode spaces or emoji: they use the same helper, but no test of their own.
 - Security beyond access to projects and tasks (session handling, rate limit, password reset) was reviewed in Worksheet 03, not again here.
-- No SAST on the Java code (Semgrep planned for Worksheet 05).
+- No SAST on the Java code (Semgrep planned for Worksheet 05). Done in Worksheet 05, Ex. 4 (see above).
 - Q-6 fix on the running isolated app (checked with the integration test only).
