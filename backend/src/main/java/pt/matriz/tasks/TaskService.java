@@ -404,7 +404,9 @@ public class TaskService {
     /**
      * Latest change of each task in the activity log (extra feature "last change", FR14): task updates
      * and assignee changes. When both were written by the same update, the task entry wins (it lists
-     * every changed field).
+     * every changed field). Assignees added when the task is created are not a change: their entries have the
+     * same timestamp as the task's CREATED entry (same transaction, now()), so they are left out
+     * (docs/quality-security-review.md, Q-4).
      */
     private Map<Long, LastChangeRow> lastChangesOf(long projectId, Collection<Long> taskIds) {
         Map<Long, LastChangeRow> result = new HashMap<>();
@@ -414,8 +416,11 @@ public class TaskService {
                         + " AND entity_id IN (:ids)"
                         + " UNION ALL"
                         + " SELECT (changes ->> 'taskId')::bigint, actor_id, changes::text, created_at, id, entity_type"
-                        + " FROM activity_log WHERE project_id = :projectId AND entity_type = 'ASSIGNEE'"
+                        + " FROM activity_log a WHERE project_id = :projectId AND entity_type = 'ASSIGNEE'"
                         + " AND (changes ->> 'taskId')::bigint IN (:ids)"
+                        + " AND NOT EXISTS (SELECT 1 FROM activity_log c WHERE c.project_id = a.project_id"
+                        + " AND c.entity_type = 'TASK' AND c.action = 'CREATED'"
+                        + " AND c.entity_id = (a.changes ->> 'taskId')::bigint AND c.created_at = a.created_at)"
                         + ") x ORDER BY task_id, created_at DESC, (entity_type = 'TASK') DESC, id DESC",
                 new MapSqlParameterSource("projectId", projectId).addValue("ids", taskIds),
                 rs -> {

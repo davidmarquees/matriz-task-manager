@@ -16,7 +16,6 @@ import static pt.matriz.ApiTestSupport.userId;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -152,7 +151,6 @@ class TaskCreateAndReadIT {
     }
 
     @Test
-    @Disabled("Fails: finding Q-4 in docs/quality-security-review.md (pending decision)")
     void aNewTaskWithAssigneesHasNoLastChange() throws Exception { // FR14, US15, Task.lastChange in openapi.yaml
         JsonNode created = body(send(post("/projects/" + projectId + "/tasks"), member,
                 "{\"title\":\"Assigned task\",\"assigneeIds\":[" + memberId + "]}").andExpect(status().isCreated()));

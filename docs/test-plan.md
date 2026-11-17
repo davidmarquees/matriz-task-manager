@@ -58,7 +58,7 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | T18 | Member removed from the project, with the session still open, reads or edits a task | 404 on the next request | D18 | I | `ProjectsApiIT.removingAMemberRemovesTheirAssignmentsButKeepsTheTasks` (project, after a new login) | Partial |
 | T19 | Task creator removed from the project tries to delete their task; a Manager deletes it | 404 for the former member; 204 for the Manager | D24 | I | — | Planned (Ex. 3 or Ex. 5) |
 | T27 | GET a task or POST to a project that does not exist | 404, same body as for a foreign task (apart from `instance`); nothing saved | E4, D17 | I | `TaskCreateAndReadIT.aMissingTaskOrProjectLooksTheSameAsAForeignOne` | Covered (passed 2026-11-17) |
-| T28 | New task: without assignees; with assignees | `lastChange` is null in both cases (never changed; US15 "Criada") | FR14, US15, openapi `Task.lastChange` | I | `TaskCreateAndReadIT.aNewTaskWithoutAssigneesHasNoLastChange`; `.aNewTaskWithAssigneesHasNoLastChange` (`@Disabled`) | Without: Covered. With: Failing, finding Q-4 (pending decision) |
+| T28 | New task: without assignees; with assignees | `lastChange` is null in both cases (never changed; US15 "Criada") | FR14, US15, openapi `Task.lastChange` | I | `TaskCreateAndReadIT.aNewTaskWithoutAssigneesHasNoLastChange`; `.aNewTaskWithAssigneesHasNoLastChange` | Covered: regression test for finding Q-4, fixed 2026-11-17 |
 
 ### 2.4 Malformed requests and failures
 
@@ -92,3 +92,4 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | Ex. 2: fix Q-1, Q-2 | `cd backend && ./mvnw test -Dtest=TextInputTest`; `./mvnw verify` | 9 tests, 0 failures; full backend 95 tests, 0 failures, 0 skipped; `BUILD SUCCESS` |
 | Ex. 3: integration | `cd backend && ./mvnw verify -DskipUTs -Dit.test=TaskCreateAndReadIT` | 7 tests, 0 failures, 1 skipped (Q-4) |
 | Ex. 3: full backend | `cd backend && ./mvnw verify` | Unit 9 tests, 0 failures; integration 93 tests, 0 failures, 1 skipped (Q-4); `BUILD SUCCESS` |
+| Ex. 3: fix Q-4 | `cd backend && ./mvnw verify` | Unit 9 tests, 0 failures; integration 93 tests, 0 failures, 0 skipped; `BUILD SUCCESS` |
