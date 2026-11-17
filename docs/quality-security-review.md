@@ -29,7 +29,7 @@ Scope: production changes of this worksheet (`TextInput`, `TaskService.lastChang
 
 | Item | Observation | Type | Outcome |
 |---|---|---|---|
-| `TextInput.trim` | Removes Unicode spaces as intended, but control characters below U+0020 that are not whitespace (U+0000 to U+0008, U+000E to U+001B) are no longer removed at the edges | Fact (code + probe) | U+0000 → finding Q-6. Other control characters (e.g. U+0007) are accepted and stored: the requirements say nothing about them, so this is a question for David, not a finding |
+| `TextInput.trim` | Removes Unicode spaces as intended, but control characters below U+0020 that are not whitespace (U+0000 to U+0008, U+000E to U+001B) are no longer removed at the edges | Fact (code + probe) | U+0000 → finding Q-6. Other control characters (e.g. U+0007) are accepted and stored: the requirements say nothing about them, so this is not a finding. **Pending decision** (David, 2026-11-17): no rule is added until the requirements define one |
 | `lastChangesOf` (Q-4 fix) | Relies on the creation entries sharing one transaction timestamp (`now()`) | Hypothesis | Holds today (one `@Transactional` method); would break if creation were split into several transactions. Covered by the regression test `TaskCreateAndReadIT.aNewTaskWithAssigneesHasNoLastChange`. No action |
 | `backend/pom.xml` | Surefire `<skip>${skipUTs}</skip>`, Failsafe `integration-test` + `verify`; `-DskipTests` skips both | Fact | No problem |
 | Tests | No test of the Unicode rules (Q-1, Q-2) or of NUL through the API, or for project names, comments and account fields | Fact | Missing tests; one would be added with the Q-6 fix |
