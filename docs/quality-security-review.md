@@ -56,7 +56,19 @@ Both run in the CI pipeline (`.github/workflows/ci.yml`) from their official Doc
   - **Accepted for now** (David, 2026-11-17): CVE-2026-47884 and CVE-2026-47890 (CRITICAL) in `spring-webmvc` 6.2.19. It is the last Spring Framework 6.2 release, and Spring Boot 3.5.16 the last 3.5 release; the fix exists only in Spring Framework 7.0.9 (Spring Boot 4), a migration outside this worksheet. Listed in `.trivyignore.yaml` with an expiry date (2027-02-17), after which the pipeline fails again. **Impact on Matriz not analysed.**
 - The image scan also covers the backend's Java dependencies (inside `app.jar`), which had no audit before (Worksheet 04, "Backend dependencies: not checked").
 
-## Ex. 5: Security Review, access to projects and tasks (2026-11-17)
+## Worksheet 05, Ex. 6: final review (2026-11-17)
+
+Review by the AI agent of the delivery setup (Dockerfiles, `nginx.conf`, `compose.yaml`, workflow, README and docs against the code, test results), on a clean clone of `chore/delivery` (`2ec4a98`). Decisions by David.
+
+| # | Finding | Evidence | Severity | Decision | Status |
+|---|---|---|---|---|---|
+| F-1 | Pages and files served by nginx had no security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`), so the interface could be framed (clickjacking); the API already had them from Spring Security | `curl -I http://localhost:8088/`: none of the three headers | Medium | Fix approved | Fixed: `frontend/security-headers.inc`, included in every nginx location; `curl -I` shows them on `/`, `/assets/…` and SPA routes |
+| F-2 | `compose.yaml` published PostgreSQL (5432) and Mailpit (1025, 8025) on every network interface, reachable from the local network | Port mappings `0.0.0.0:5432` in `docker compose ps` | Medium | Fix approved | Fixed: bound to `127.0.0.1`; port 5432 refused on the machine's network address, accepted on `127.0.0.1` |
+| F-3 | Every push to a branch with an open pull request ran the pipeline twice (`push` and `pull_request`) | Pairs of checks `(push)` / `(pull_request)` on the pull request | Low | Fix approved | Fixed: `push` only on `main`; pull requests to `main` still run it |
+| F-4 | GitHub Actions are pinned by version tag (`@v7`), not by commit SHA | `.github/workflows/ci.yml` | Low | Recorded only | Open (limitation) |
+
+Other checks with no finding: no credentials in tracked files or history (`gitleaks` 8.30.1 over 42 commits: no leaks; `git grep` for secret patterns: none; no `.env`, key or certificate tracked); images run as non-root; health checks on every service; logs of a fresh start and of the E2E runs had no WARN or ERROR.
+
 
 **Code reading.** Every task, assignee and comment operation first loads the task's project and calls `requireProjectMember` (404 for non-members, 403 for the Admin); every project change calls `ProjectAccess.requireManager` (404 non-member, 403 Member or Admin); the activity log calls `requireManager`. Identity (`createdBy`, comment author) comes from the session; unknown fields are refused (400). Membership is read from the database on each request (not cached in the session).
 

@@ -4,8 +4,10 @@
 # End-to-end tests (Playwright) run locally: see README, "End-to-end and accessibility tests".
 name: CI
 
+# Push to main, and pull requests to main (other branches run through their pull request, not twice)
 on:
   push:
+    branches: [main]
   pull_request:
     branches: [main]
 

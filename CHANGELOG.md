@@ -15,6 +15,7 @@ Release candidate of Worksheet 05 (delivery). Release notes: [docs/release-notes
 
 ### Changed
 - `docker-compose.yml` renamed to `compose.yaml`; local development now starts only `docker compose up -d db mail`.
+- The CI pipeline runs on pushes to `main` and on pull requests to `main` (no duplicate runs, finding F-3).
 - A NUL character (U+0000) in a text field now gets 422 `INVALID_CHARACTER` instead of 400 (other inputs, such as search and login email, still get 400).
 - API contract version 0.7.0 → 0.8.0 (new error code).
 - Dependency patch versions for known vulnerabilities: Tomcat 10.1.62, Jackson 2.21.8, PostgreSQL JDBC driver 42.7.12; Alpine packages upgraded in the frontend image.
@@ -24,6 +25,8 @@ Release candidate of Worksheet 05 (delivery). Release notes: [docs/release-notes
 - Flaky concurrency test: two Managers demoting each other at once may get 409 or 403 for the refused request (finding Q-7, rule D16 clarified).
 
 ### Security
+- nginx sends `X-Frame-Options`, `X-Content-Type-Options` and `Referrer-Policy` on the pages it serves (finding F-1).
+- PostgreSQL and Mailpit ports in `compose.yaml` are published on `127.0.0.1` only (finding F-2).
 - Two vulnerabilities in `spring-webmvc` 6.2.19 (CVE-2026-47884, CVE-2026-47890) are accepted until 2027-02-17 in `.trivyignore.yaml`: they are fixed only in Spring Framework 7 / Spring Boot 4.
 
 ## [1.1.0] - 2026-11-17

@@ -131,7 +131,7 @@ Continuous integration pipeline (`.github/workflows/ci.yml`):
 
 ```mermaid
 flowchart LR
-    trigger(["push / pull request to main"]) --> backend & frontend & contract & semgrep
+    trigger(["push to main, pull request to main"]) --> backend & frontend & contract & semgrep
     backend["backend<br/>unit tests, then integration tests (Testcontainers)"] --> docker
     frontend["frontend<br/>npm ci, tests, build, npm audit"] --> docker
     contract["contract<br/>OpenAPI lint"] --> docker

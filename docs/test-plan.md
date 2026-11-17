@@ -106,3 +106,5 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | Ex. 5: fix Q-5 | `cd frontend && npm test && npm run build` | 20 tests passed; build OK |
 | Ex. 5: fix Q-6 | `cd backend && ./mvnw verify` | Unit 9; integration 96; 0 failures, 0 skipped; `BUILD SUCCESS` |
 | Worksheet 05: Q-3, D49 | `cd backend && ./mvnw verify`; `cd frontend && npm test && npm run build` | Unit 13; integration 97; 0 failures, 0 skipped; `BUILD SUCCESS`. Frontend 23 tests passed; build OK |
+| Worksheet 05, Ex. 4: CI | GitHub Actions (`.github/workflows/ci.yml`) | First pull request run: 1 failure (`ConcurrencyIT`, test problem Q-7); after the fix all jobs passed; controlled failure: backend red, Docker skipped; after the revert all green |
+| Worksheet 05, Ex. 6: E2E on the Compose application (clean clone, test-only database) | `MATRIZ_E2E_URL=http://localhost:8088 npx playwright test` (with `MATRIZ_E2E_ADMIN_PASSWORD`) | 7 passed, 0 skipped; again 7 passed after the final review fixes |

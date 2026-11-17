@@ -12,8 +12,9 @@ services:
       MATRIZ_DB_APP_USER: ${MATRIZ_DB_APP_USER}
       MATRIZ_DB_APP_PASSWORD: ${MATRIZ_DB_APP_PASSWORD}
     ports:
-      # Published for local development (backend run with ./mvnw); the backend container uses the network
-      - "${MATRIZ_DB_PORT:-5432}:5432"
+      # Published on this machine only (127.0.0.1), for local development (backend run with ./mvnw);
+      # the backend container uses the network
+      - "127.0.0.1:${MATRIZ_DB_PORT:-5432}:5432"
     volumes:
       - matriz-db-data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -28,8 +29,9 @@ services:
     # Catches every email the backend sends; nothing leaves the machine. Web UI: http://localhost:8025
     image: axllent/mailpit:v1.27
     ports:
-      - "${MATRIZ_MAIL_PORT:-1025}:1025"
-      - "${MATRIZ_MAIL_UI_PORT:-8025}:8025"
+      # On this machine only (127.0.0.1)
+      - "127.0.0.1:${MATRIZ_MAIL_PORT:-1025}:1025"
+      - "127.0.0.1:${MATRIZ_MAIL_UI_PORT:-8025}:8025"
     networks: [matriz]
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]

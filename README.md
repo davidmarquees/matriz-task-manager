@@ -85,10 +85,10 @@ Builds the backend and frontend images and starts four services from [compose.ya
 
 | Service | Image | Role | Host port |
 |---|---|---|---|
-| `db` | `postgres:16` | Database, persistent volume `matriz-db-data`; creates the application user on the first start (`docker/postgres/init`) | `MATRIZ_DB_PORT` (5432) |
-| `mail` | `axllent/mailpit:v1.27` | Catches every email; nothing leaves the machine | 1025 (SMTP), `MATRIZ_MAIL_UI_PORT` (8025, web) |
+| `db` | `postgres:16` | Database, persistent volume `matriz-db-data`; creates the application user on the first start (`docker/postgres/init`) | `MATRIZ_DB_PORT` (5432), this machine only |
+| `mail` | `axllent/mailpit:v1.27` | Catches every email; nothing leaves the machine | 1025 (SMTP), `MATRIZ_MAIL_UI_PORT` (8025, web), this machine only |
 | `backend` | built from `backend/Dockerfile` | REST API on `/api`; starts after `db` is healthy | none (only nginx reaches it) |
-| `frontend` | built from `frontend/Dockerfile` | nginx: serves the React build and forwards `/api` to `backend:8080`; starts after `backend` is healthy | `MATRIZ_WEB_PORT` (8088) |
+| `frontend` | built from `frontend/Dockerfile` | nginx: serves the React build (with security headers) and forwards `/api` to `backend:8080`; starts after `backend` is healthy | `MATRIZ_WEB_PORT` (8088) |
 
 Open <http://localhost:8088>. Useful commands:
 
@@ -194,13 +194,13 @@ set -a; source ../.env; set +a
 npm run e2e
 ```
 
-One spec only: `npx playwright test e2e/task-create.spec.ts`. `MATRIZ_E2E_URL` changes the address (default <http://localhost:5173>, the development mode); for the Compose application use `MATRIZ_E2E_URL=http://localhost:8088`. To keep the development database clean, run a second backend on another port with its own database and point a second Vite server at it (`MATRIZ_BACKEND_URL=http://localhost:8081 npx vite --port 5174`, then `MATRIZ_E2E_URL=http://localhost:5174`). Many runs in a row reach the login rate limit (20 per 15 minutes); for a local test backend start it with `MATRIZ_LOGIN_RATELIMIT_MAXATTEMPTS=1000`. The HTML report is in `frontend/playwright-report` (git-ignored).
+One spec only: `npx playwright test e2e/task-create.spec.ts`. `MATRIZ_E2E_URL` changes the address (default <http://localhost:5173>, the development mode); for the Compose application use `MATRIZ_E2E_URL=http://localhost:8088`. To keep the development database clean, run a second backend on another port with its own database and point a second Vite server at it (`MATRIZ_BACKEND_URL=http://localhost:8081 npx vite --port 5174`, then `MATRIZ_E2E_URL=http://localhost:5174`). Many runs in a row reach the login rate limit (20 per 15 minutes); for a local test backend start it with `MATRIZ_LOGIN_RATELIMIT_MAXATTEMPTS=1000`; for the Compose application, add that variable to the `backend` environment in a local `compose.override.yaml` (Docker Compose reads it automatically; do not commit it). The HTML report is in `frontend/playwright-report` (git-ignored).
 
 Why not in CI: they need the whole running application and Chrome, they create data (the Admin test cannot clean up), and many runs reach the login rate limit. The pipeline already blocks on unit, integration and component tests and on the image build; the E2E tests are run locally before a release.
 
 ## Continuous integration
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push and on pull requests to `main`, with read-only permissions (`contents: read`) and no secrets:
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on pushes to `main` and on pull requests to `main`, with read-only permissions (`contents: read`) and no secrets:
 
 1. In parallel: **backend** (unit tests, then integration tests and package), **frontend** (`npm ci`, tests, build, `npm audit --audit-level=high`), **contract** (OpenAPI lint) and **Semgrep** (Java, TypeScript and React rules; any finding fails).
 2. Only if all of them pass, **docker**: `docker compose config -q` with `.env.example`, `docker compose build`, Trivy scan of both images (HIGH and CRITICAL with a published fix fail, except those accepted in [.trivyignore.yaml](.trivyignore.yaml)), start with `docker compose up --wait` and a smoke test through nginx.
@@ -229,6 +229,7 @@ Versions follow [Semantic Versioning](https://semver.org/); tags `vX.Y.Z` mark t
 | [docs/ai-usage.md](docs/ai-usage.md) | AI suggestions corrected or rejected by the developer |
 | [CHANGELOG.md](CHANGELOG.md) | Changes per version |
 | [docs/release-notes/v1.2.0-rc.1.md](docs/release-notes/v1.2.0-rc.1.md) | Release notes of the current release candidate |
+| [docs/delivery-report.md](docs/delivery-report.md) | Worksheet 05 delivery report: changes, results, problems, AI use, limitations |
 | [AGENTS.md](AGENTS.md) | Instructions for coding agents |
 
 ## Current status
@@ -241,3 +242,4 @@ Known limitations:
 - Emails go only to the local Mailpit; the production SMTP provider and the hosting are still to decide, so the application is not deployed.
 - Two vulnerabilities in `spring-webmvc` 6.2.19 are accepted until 2027-02-17: the fix needs Spring Boot 4 (see [docs/quality-security-review.md](docs/quality-security-review.md)).
 - End-to-end tests run locally, not in CI.
+- GitHub Actions are pinned by version tag, not by commit SHA.
