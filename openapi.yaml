@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Matriz API
-  version: 0.7.0
+  version: 0.8.0
   license:
     name: Proprietary
   summary: REST API of Matriz, a project and task management application (MVP).

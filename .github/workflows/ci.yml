@@ -107,11 +107,16 @@ jobs:
       - name: Build the images
         run: docker compose build
       - name: Scan the images (Trivy; HIGH and CRITICAL with a fix fail, except .trivyignore.yaml)
+        # The vulnerability databases come from the public mirror (the default registry limits downloads) and
+        # are kept in one volume, so they are downloaded once for both images.
+        timeout-minutes: 10
         run: |
+          docker volume create trivy-cache
           for image in matriz-backend:local matriz-frontend:local; do
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore.yaml:/work/.trivyignore.yaml:ro" \
-              aquasec/trivy:0.76.2 image --severity HIGH,CRITICAL --ignore-unfixed \
-              --ignorefile /work/.trivyignore.yaml --exit-code 1 "$image"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v trivy-cache:/root/.cache \
+              -v "$PWD/.trivyignore.yaml:/work/.trivyignore.yaml:ro" aquasec/trivy:0.76.2 image \
+              --db-repository mirror.gcr.io/aquasec/trivy-db:2 --java-db-repository mirror.gcr.io/aquasec/trivy-java-db:1 \
+              --severity HIGH,CRITICAL --ignore-unfixed --ignorefile /work/.trivyignore.yaml --exit-code 1 "$image"
           done
       - name: Start the application and wait until every service is healthy
         run: docker compose up -d --wait --wait-timeout 180

@@ -13,7 +13,7 @@
 
     <groupId>pt.matriz</groupId>
     <artifactId>matriz-backend</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0-rc.1</version>
     <name>Matriz backend</name>
     <description>REST API of Matriz (modular monolith, see docs/architecture.md)</description>
 

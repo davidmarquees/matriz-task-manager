@@ -52,7 +52,9 @@
 | Password hashing | BCrypt (Spring Security) | [A] | Meets NFR3. |
 | Schema migrations | Flyway | [D] | Versioned schema. Demo accounts and demo projects are seeded only in the development profile (separate Flyway location, applied once, never wiping data); the Admin account is created at first start from environment variables (A25). |
 | Tests | JUnit 5, Spring Boot Test, Testcontainers (PostgreSQL); Vitest and Testing Library in the frontend | [D] | Isolated and repeatable database for integration tests; prepares Worksheet 04. |
-| Local runtime | Docker Compose for PostgreSQL; backend and frontend run locally | [D] | Simple; configuration only through environment variables, with a `.env.example` of fictitious values. |
+| Local runtime | Docker Compose (`compose.yaml`): PostgreSQL, Mailpit, backend and frontend images; or PostgreSQL and Mailpit only, with backend and frontend run locally for development | [D] | Simple; configuration only through environment variables, with a `.env.example` of fictitious values. Whole application in containers since Worksheet 05. |
+| Container images | Backend: Eclipse Temurin 21 JRE (Ubuntu 22.04), non-root. Frontend: built with Node 24, served by nginx (unprivileged, Alpine), which also forwards `/api` to the backend | [D] | Worksheet 05. nginx keeps one origin for the browser (session and CSRF cookies), as the Vite proxy does in development; no change to the application. |
+| Continuous integration | GitHub Actions (`.github/workflows/ci.yml`): tests, build, contract lint, Semgrep, Docker images, Trivy scan, smoke test | [D] | Worksheet 05. Read-only permissions, no secrets. |
 
 ## 5. Components and responsibilities
 
@@ -89,6 +91,54 @@ PostgreSQL
 | Dashboard | For each project of the user, task counts per status, plus totals across those projects. | FR9, E2 |
 | Database | Persistence, integrity constraints, cascade delete of a project's tasks and comments. | A11 |
 
+### Diagrams
+
+Components and how they communicate (whole application with Docker Compose, Worksheet 05):
+
+```mermaid
+flowchart LR
+    user([User's browser])
+    subgraph compose["Docker Compose: network matriz"]
+        frontend["frontend<br/>nginx: React build<br/>proxy /api"]
+        backend["backend<br/>Spring Boot (modular monolith)<br/>/api, port 8080"]
+        db[("db<br/>PostgreSQL 16<br/>volume matriz-db-data")]
+        mail["mail<br/>Mailpit (SMTP 1025)"]
+    end
+    user -- "HTTP :8088<br/>pages and /api (same origin)" --> frontend
+    frontend -- "/api/* (X-Forwarded-For)" --> backend
+    backend -- "JDBC (Flyway as owner,<br/>runtime as app user)" --> db
+    backend -- "SMTP: reset email" --> mail
+    user -. "Mailpit web :8025 (development)" .-> mail
+```
+
+In development mode the Vite dev server (port 5173) takes the place of nginx, and the backend runs with `./mvnw` on port 8080; `db` and `mail` still come from Compose.
+
+Backend packages (`backend/src/main/java/pt/matriz`) and which other packages each one imports, read from the code on 2026-11-17. Every package also uses `web` (shared validation, error format) and `security` (current user); those arrows are left out. Controllers live inside each module package.
+
+```mermaid
+flowchart LR
+    accounts --> audit & email & projects
+    audit --> accounts & projects
+    projects --> accounts & audit & tasks
+    tasks --> accounts & audit & projects
+    comments --> accounts & audit & projects & tasks
+    dashboard --> projects & tasks
+```
+
+Fact: some packages import each other (for example `projects` and `tasks`, `accounts` and `audit`). Whether every such import goes through a service rather than a repository (module rule below) was not checked in Worksheet 05.
+
+Continuous integration pipeline (`.github/workflows/ci.yml`):
+
+```mermaid
+flowchart LR
+    trigger(["push / pull request to main"]) --> backend & frontend & contract & semgrep
+    backend["backend<br/>unit tests, then integration tests (Testcontainers)"] --> docker
+    frontend["frontend<br/>npm ci, tests, build, npm audit"] --> docker
+    contract["contract<br/>OpenAPI lint"] --> docker
+    semgrep["Semgrep<br/>static analysis"] --> docker
+    docker["docker<br/>compose config, build images,<br/>Trivy scan, up --wait, smoke test"]
+```
+
 ### Module rules [D]
 
 - Each module owns its own tables; other modules use its service interface, not its repositories.
@@ -108,7 +158,7 @@ Single list of pending technical decisions (constraints.md links here).
 
 Decided in Worksheet 03 (docs/implementation-plan.md, section 7): versions, build tools, local runtime, testing strategy, repository layout, pagination and how pre-created account passwords are provided (see section 4).
 
-- [P] Hosting beyond the local environment (Worksheet 05).
+- [P] Hosting beyond the local environment. Worksheet 05 prepared the images, Compose and CI, but no deployment target was chosen; not needed for the worksheet.
 - [D] End-to-end tests with Playwright and an axe-core accessibility audit, adopted in Worksheet 03, Ex. 8 (`frontend/e2e`); Worksheet 04 can extend them.
 - [D] Reset email in development: Mailpit (local SMTP test server in `compose.yaml`, renamed from `docker-compose.yml` in Worksheet 05), Worksheet 03, Ex. 8.
 - [P] SMTP provider and sender address for production.

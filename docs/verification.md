@@ -237,3 +237,19 @@ Branch `test/quality-security` (from `main` at `v1.0.0`). Scenarios and expected
 | V-62 | Full suites at the end of the worksheet | Auto | Everything passes | `./mvnw verify`: unit 9, integration 96, 0 failures, 0 skipped; `npm test` 20; `npm run build` OK; E2E 6 passed, 1 skipped (before the Q-6 fix, which changed no interface); contract lint valid (2 old warnings) | Commands |
 
 Not checked in this worksheet: the Admin E2E test (needs `MATRIZ_E2E_ADMIN_PASSWORD` and a test-only database); Q-3 and the task edit form in a browser; backend dependency audit and SAST (Worksheet 05).
+
+## Worksheet 05 — Docker, Docker Compose, CI and release candidate, 2026-11-17
+
+Branch `chore/delivery` (from `main` at `v1.1.0`), pull request to `main`. Commands and full results: [quality-security-review.md](quality-security-review.md) (Semgrep, Trivy, Q-3, D49, Q-7) and [test-plan.md](test-plan.md). CI run links were given by the developer (private repository; their content was read by the developer, and the failing run's log was read by the agent).
+
+| # | Scenario | Type | Expected | Observed | Evidence |
+|---|---|---|---|---|---|
+| V-63 | Analysis of the project (Ex. 1) | Auto | Existing tests pass before any change | `./mvnw verify`: unit 9, integration 96, 0 failures; `npm test` 20 passed; `docker compose config -q` OK | Commands run on 2026-11-17 |
+| V-64 | Q-3 and rule D49 (before Ex. 2) | Auto | Regression tests fail without the fix and pass with it | Q-3 tests: 2 failures without the fix; with the fixes: unit 13, integration 97, Vitest 23, build OK, contract lint valid | Commit `42f0b8a` |
+| V-65 | Docker images (Ex. 2) | Manual | Both images build and run; no credentials inside; non-root | `docker build` OK (backend 514 MB, frontend 93 MB); both containers `healthy`; through nginx: health 200, page and SPA route 200, demo login 200, `/projects` and `/dashboard` 200; no `MATRIZ_*` variable in the images; uid 10001 and 101 | Commit `b706570`; base image changed to Ubuntu 22.04 (jammy) because the local 24.04 base layer was corrupted after the disk filled |
+| V-66 | Whole application with Docker Compose (Ex. 3) | Manual | Services healthy; components communicate; data persists | `config -q` OK; `build` OK; `up -d`: 4 services `healthy`; logs: 0 ERROR/WARN; login 200, project and task created (201); reset email reached Mailpit with a link to :8088; project still there after `down` and `up -d`, then deleted (204) | Commit `60a4ebe` |
+| V-67 | Image scan and static analysis (Ex. 4) | Auto | No blocking HIGH/CRITICAL; no Semgrep finding | Semgrep: 94 files, 0 findings. Trivy before fixes: backend 14, frontend 13; after patch versions and `apk upgrade`: 0 blocking (2 `spring-webmvc` CVEs accepted until 2027-02-17) | Commit `9b2c1f6`; actionlint 0 issues |
+| V-68 | CI pipeline on GitHub (Ex. 4) | Auto | Every job passes; Docker job only after the checks | First pull request run: backend failed (`ConcurrencyIT`, `[200, 403]`, finding Q-7), Docker job skipped; after the test fix every job passed | Run 44126288477 (green, commit `77e3ef0`); failing log read from the downloaded archive |
+| V-69 | Controlled failure (Ex. 4, additional validation) | Auto | Pipeline fails when a test fails; Docker job does not run; green again after the revert | `TextInputTest.acceptsAValidTitle` changed on purpose: backend job red, Docker job skipped; after `git revert`: every job green | Runs 44131426927 (red, commit `27828f3`) and 44131734299 (green, commit `314c6a4`) |
+
+Not checked in Ex. 1 to 5: the interface in a browser against the Compose application, and the E2E tests (planned for Ex. 6); the impact of the two accepted `spring-webmvc` CVEs.
