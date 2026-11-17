@@ -84,11 +84,20 @@ Change the passwords in `.env`. `.env.example` has fictitious values only; never
 | `MATRIZ_APP_URL` | Backend | Address of the frontend, used in the reset link (default `http://localhost:5173`) |
 | `VITE_API_URL` | Frontend | API address used by the browser (default `/api`) |
 | `MATRIZ_BACKEND_URL` | Frontend (dev server) | Backend address for the Vite proxy |
+| `MATRIZ_WEB_PORT` | Docker Compose | Host port of the whole application in containers (default 8088) |
+
+### Whole application with Docker Compose
+
+```bash
+docker compose up -d --build
+```
+
+Builds the backend and frontend images and starts four services from `compose.yaml`: `db` (PostgreSQL 16), `mail` (Mailpit), `backend` and `frontend` (nginx serving the React build and forwarding `/api` to the backend). Open <http://localhost:8088> (`MATRIZ_WEB_PORT`). Check with `docker compose ps` (all services `healthy`) and `docker compose logs --tail=50`. The backend is not published on the host; only nginx reaches it. It uses the same database volume as the development setup below.
 
 ### 2. Database
 
 ```bash
-docker compose up -d
+docker compose up -d db mail
 ```
 
 Starts PostgreSQL 16 with a persistent volume and Mailpit, a local mail catcher. On the first start it also creates the application user (`docker/postgres/init`). `docker compose down` keeps the data; `docker compose down -v` deletes it.

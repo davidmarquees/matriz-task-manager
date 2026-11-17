@@ -110,5 +110,5 @@ Decided in Worksheet 03 (docs/implementation-plan.md, section 7): versions, buil
 
 - [P] Hosting beyond the local environment (Worksheet 05).
 - [D] End-to-end tests with Playwright and an axe-core accessibility audit, adopted in Worksheet 03, Ex. 8 (`frontend/e2e`); Worksheet 04 can extend them.
-- [D] Reset email in development: Mailpit (local SMTP test server in `docker-compose.yml`), Worksheet 03, Ex. 8.
+- [D] Reset email in development: Mailpit (local SMTP test server in `compose.yaml`, renamed from `docker-compose.yml` in Worksheet 05), Worksheet 03, Ex. 8.
 - [P] SMTP provider and sender address for production.
