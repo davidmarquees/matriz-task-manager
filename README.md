@@ -54,7 +54,8 @@ Modular monolith: one Java + Spring Boot backend split into business modules, a 
 
 - Java 21 (check with `java -version`; on macOS `export JAVA_HOME=$(/usr/libexec/java_home -v 21)`). Maven is not needed: the backend includes the Maven Wrapper (`./mvnw`).
 - Node.js 20 or later with npm.
-- Docker (Docker Desktop on macOS), running.
+- Docker (Docker Desktop on macOS), running: it provides PostgreSQL 16 and Mailpit, and the backend tests use it (Testcontainers).
+- Google Chrome, only for the end-to-end tests.
 
 ### 1. Configuration
 
@@ -77,6 +78,10 @@ Change the passwords in `.env`. `.env.example` has fictitious values only; never
 | `MATRIZ_PROFILE` | Backend | `dev` adds the demo data; leave empty in production |
 | `MATRIZ_ADMIN_NAME`, `MATRIZ_ADMIN_EMAIL`, `MATRIZ_ADMIN_PASSWORD` | Backend | Admin account created at the first start if none exists |
 | `MATRIZ_DEMO_PASSWORD` | Backend (`dev`) | Password of the two demo accounts |
+| `MATRIZ_MAIL_HOST`, `MATRIZ_MAIL_PORT`, `MATRIZ_MAIL_USERNAME`, `MATRIZ_MAIL_PASSWORD` | Compose, backend | SMTP server for the reset email (Mailpit in development: `localhost`, `1025`, no user) |
+| `MATRIZ_MAIL_UI_PORT` | Compose | Port of the Mailpit web page (default 8025) |
+| `MATRIZ_MAIL_FROM` | Backend | Sender of the reset email |
+| `MATRIZ_APP_URL` | Backend | Address of the frontend, used in the reset link (default `http://localhost:5173`) |
 | `VITE_API_URL` | Frontend | API address used by the browser (default `/api`) |
 | `MATRIZ_BACKEND_URL` | Frontend (dev server) | Backend address for the Vite proxy |
 
@@ -167,4 +172,6 @@ npm run e2e
 
 ## Current status
 
-Implementation (Worksheet 03). Done: increment 1 (project skeleton, database schema and demo data) increment 2 (authentication and access rules), increment 3 (projects and members) and increment 4 (tasks, with the "last change" note) increment 5 (assignees and comments) and increment 6 (complete interface: approved design, PT/EN, light/dark/auto themes, mobile). Increment 7 (Ex. 8 verification, end-to-end and accessibility tests) and the approved optional features (project history, account administration, audit log, password reset by email) are done; next: Ex. 9 (review and delivery). See [docs/implementation-plan.md](docs/implementation-plan.md).
+MVP of Worksheet 03 complete: authentication, projects, members, tasks, assignees, comments and the dashboard, plus the approved optional features (password change and reset by email, saved language and theme, project history, account administration and audit log). Verified in [docs/verification.md](docs/verification.md) (Ex. 8 scenarios 01–09, Ex. 9 review); increments and decisions in [docs/implementation-plan.md](docs/implementation-plan.md).
+
+Known limitations: sessions and the login rate limit are kept in memory (restarting the backend ends every session; one backend instance only); emails go only to the local Mailpit; the production SMTP provider and hosting are still to decide.

@@ -61,5 +61,5 @@ Plural forms (e.g. "Concluídas" in the counters) follow the same translation fi
 
 ## Pending decisions
 
-- [P] API endpoint for the dashboard data and for saving the language and theme (not yet in `openapi.yaml`).
-- [P] Final colour palette for both themes (the wireframe is greyscale); to be checked for WCAG AA contrast.
+- [D] Dashboard data: `GET /dashboard`; language and theme saved with `PATCH /auth/me/preferences` (openapi.yaml, Worksheet 03).
+- [D] Colour palette for both themes approved in Worksheet 03, Ex. 7 (`frontend/src/styles/tokens.css`); WCAG AA contrast checked, and no serious axe-core violation in either theme (Ex. 8).

@@ -135,7 +135,7 @@ Status values: Not started · Planned (plan approved) · In progress · Done (ve
 | 6 | Ex. 7 | Complete frontend | Done (2026-11-16) | [verification.md](verification.md) V-32 to V-38; `./mvnw verify` 61 tests, `npm test` 11 tests passed; commit pending |
 | 7 | Ex. 8 | Verification, tests, bug fixes | Done (2026-11-16) | [verification.md](verification.md) scenarios 01–09 and V-40 to V-46; `./mvnw verify` 81 tests, `npm test` 19 tests, `npm run e2e` 5 passed; one bug (redirect after logout) fixed with a regression test; commit pending |
 | 8 | optional | Documented features outside the Worksheet (P9) | Done (2026-11-16) | Project activity log, account administration, appoint Manager, user audit log, password reset by email (Mailpit); contract 0.7.0; [verification.md](verification.md) V-43 to V-45; commit pending |
-| 9 | Ex. 9 | Review, documentation, delivery | Not started | — |
+| 9 | Ex. 9 | Review, documentation, delivery | Done (2026-11-17) | [verification.md](verification.md) review R-1 to R-4 (fixed), V-47 to V-54; `./mvnw verify` 86 tests, `npm test` 19 tests, `npm run e2e` 4 passed / 1 skipped; run from a clean copy; commits and tag by the developer |
 
 ### Increment 0 — Plan and contract (Ex. 1)
 - **Files:** `docs/implementation-plan.md` (new), `openapi.yaml` (operations of section 6, pagination schema, C1, C2), `docs/requirements.md` and `docs/user-stories.md` (G2), `docs/database.md` (section 6a, G4, G5, §8), `docs/constraints.md` (A25), `docs/architecture.md` (C3, approved P1–P9 in §4 and §7).

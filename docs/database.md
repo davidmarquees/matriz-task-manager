@@ -425,6 +425,6 @@ New users and users added later are not affected by existing data: their access 
 ## 8. Pending decisions
 
 - [D] Pagination of project and task lists: `page`, `size` (max 100), `totalItems` (openapi.yaml; implementation-plan.md P7).
-- [P] Endpoint to read a project's activity log (paginated): optional increment 8 of docs/implementation-plan.md (P9).
+- [D] Endpoint to read a project's activity log (paginated, project Managers): `GET /projects/{projectId}/activity`, openapi.yaml 0.6.0 (Worksheet 03, Ex. 8).
 
 - [P] How long the logs are kept (constraints.md, section 5).

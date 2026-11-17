@@ -1,6 +1,6 @@
 # AGENTS.md — Instructions for coding agents
 
-Matriz project: project and task management application. Current phase: design done (Worksheet 02); implementation starts in Worksheet 03.
+Matriz project: project and task management application. Current phase: MVP implemented and verified (Worksheet 03); stack Java 21 + Spring Boot 3.5 + PostgreSQL 16 (backend), React 18 + Vite + TypeScript (frontend). Work on a feature branch, never on `main`.
 
 ## 1. Before any task
 - Read [README.md](README.md) and the `docs/` files relevant to the task:
@@ -11,7 +11,25 @@ Matriz project: project and task management application. Current phase: design d
   - `docs/database.md`: data model, ER diagram, business rules and error cases (D1–D48).
   - `openapi.yaml`: REST API contract; implement endpoints exactly as specified.
   - `docs/ui/wireframe.md`: dashboard wireframes and UI rules (labels, languages, themes).
+  - `docs/implementation-plan.md`: increments, decisions and their status.
+  - `docs/verification.md`: verified scenarios with evidence; add a row for every new check.
 - If the documentation is silent or contradictory, stop and ask. Do not fill gaps on your own.
+
+## 1a. Commands (run from the repository root unless stated)
+Configuration comes from `.env` (copy `.env.example`; fictitious values only). Java 21 must be the active JDK.
+
+| Purpose | Command |
+|---|---|
+| Database and local mail catcher (PostgreSQL 16, Mailpit UI on :8025) | `docker compose up -d` |
+| Backend: schema (Flyway), dev seed and API on :8080/api | `cd backend && ./mvnw spring-boot:run` |
+| Frontend on :5173 (proxy `/api` → backend) | `cd frontend && npm install && npm run dev` |
+| Backend tests (Testcontainers; Docker must run) | `cd backend && ./mvnw verify` |
+| Frontend tests and type-checked build | `cd frontend && npm test && npm run build` |
+| End-to-end and accessibility tests (app running; `MATRIZ_DEMO_PASSWORD` from `.env`) | `cd frontend && set -a && source ../.env && set +a && npm run e2e` |
+| API contract lint | `npx --yes @redocly/cli@latest lint openapi.yaml` |
+| Dependency audit (frontend) | `cd frontend && npm audit` |
+
+Before reporting a task as done, run the backend tests, the frontend tests and build, and the contract lint when `openapi.yaml` changes; run the E2E tests when the interface changes. Report the real results.
 
 ## 2. Scope and decisions
 - Implement only what is documented and approved. Do not invent features, business rules or requirements.

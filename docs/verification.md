@@ -2,7 +2,7 @@
 
 Verified scenarios, one row each: what was expected, what was observed and the evidence.
 Type: **Auto** = automated test · **Manual** = command or check run by hand.
-Worksheet 03, Ex. 8 scenarios (01 to 09) are added when that exercise is done.
+Worksheet 03: Ex. 8 scenarios (01 to 09) in increment 7; Ex. 9 review, refactoring and examples of AI use in increment 9.
 
 ## Increment 1 — Skeleton and persistence (Ex. 2), 2026-11-16
 
@@ -173,3 +173,50 @@ Fresh run of every check on the code of this increment. Manual checks in the bro
 - The real reactivation login of a reactivated account (forced password change) was checked by `AdminApiTest`, not by hand.
 - Network failure in the browser (backend down while submitting a form): not run by hand; the error path is the same as the 409 and 422 cases above and the 500 case is covered by `FailureHandlingTest`.
 - Screen readers: not tested; axe-core finds only automatic issues.
+
+## Increment 9 — Ex. 9 · review and delivery, 2026-11-17
+
+### Diff review (from `27bcf77`, with AI support)
+
+Focus asked by the Worksheet: permissions, validation, error handling and changes out of scope. The AI read the security filter chain, authentication, account administration, members, password reset and the access checks, and compared every route in the code with `openapi.yaml` (script over the `@*Mapping` annotations and the contract paths): 34 operations in both, none missing or extra.
+
+| # | Finding | Severity | Decision |
+|---|---|---|---|
+| R-1 | Deactivating an account checks "only Manager" (D5) before locking the projects, so the other Manager being demoted at the same moment can leave a project with no Manager | Medium | **Fixed** (approved): `MemberService.lockProjectsOf` locks the user's projects before the check |
+| R-2 | Spring Boot creates an unused in-memory user and logs "Using generated security password" at start-up (no access: form login and HTTP Basic are off) | Low | **Fixed** (approved): `UserDetailsServiceAutoConfiguration` excluded |
+| R-3 | Contract limits not applied: reset request `email` ≤ 254 and `/admin/users?q=` ≤ 100 are accepted when longer | Low | **Fixed** (approved): 422 `TOO_LONG` |
+| R-4 | Deactivation leaves pending password reset links valid; after a reactivation within 30 minutes an old link skips the initial password set by the Admin | Low | **Fixed** (approved): deactivation marks pending links as used |
+| — | Login rate limit kept in memory (resets on restart, one instance only) | Known limitation | Documented in README; not changed |
+
+| # | Check of the fixes | Type | Expected | Observed | Evidence |
+|---|---|---|---|---|---|
+| V-49 | R-1: deactivation and demotion at the same moment (D5, D16) | Auto | The project always keeps a Manager | Before the fix the new test failed in round 0 (both requests 200, 0 Managers left); after it, 10 rounds passed | `ConcurrencyTest.deactivatingAManagerWhileTheOtherIsDemotedNeverLeavesAProjectWithoutManager` |
+| V-50 | R-2: no default user | Auto + Manual | No `UserDetailsService` bean; no generated password in the start-up log; login unchanged | As expected; start-up log of the new jar: 0 lines with "generated security password"; `AuthFlowTest` (13) and `SessionCookiesTest` pass | `HealthEndpointTest.thereIsNoDefaultInMemoryUser`; backend log |
+| V-51 | R-3: contract limits | Auto | Email of 263 characters → 422 `TOO_LONG` and no email; `q` of 101 → 422, of 100 → 200 | As expected | `PasswordResetTest.anEmailLongerThanTheContractAllowsIsRefused`, `AdminApiTest.searchTextLongerThanTheContractAllowsIsRefused` |
+| V-52 | R-4: old link after deactivation and reactivation | Auto | Old link → 422 `INVALID_TOKEN`; the Admin's initial password still works | As expected; without the fix the same test got 204 (old link accepted) | `PasswordResetTest.deactivationInvalidatesPendingLinks` |
+| V-53 | Full suites after the fixes | Auto | Everything passes | `./mvnw verify` 86 tests, 0 failures; `npm test` 19; `npm run build` OK; `npm run e2e` 4 passed, 1 skipped | Commands |
+
+No change out of scope was found; permissions (Admin, Manager, Member, non-member), CSRF, the account check on every request and generic error bodies match the documents.
+
+### Refactoring (separate step)
+
+- **Opportunity:** the dashboard project row (`ProjectRow` in `DashboardPage.tsx`) repeated the bar and legend markup of the shared `CountsBar` component, already used by the projects list and the project page.
+- **Decision:** use `CountsBar` in the dashboard row and remove the copy and the unused `pct` helper (−20 lines). Benefit: one place for the status bar and its accessible label (NFR8); no behaviour change intended.
+- **Behaviour preserved:**
+
+| # | Check | Type | Expected | Observed | Evidence |
+|---|---|---|---|---|---|
+| V-47 | Same dashboard before and after | Manual | Same position and size of each row, bar and legend; same `aria-label`; same segment widths and legend text | Identical: e.g. "Annual report" bar 341×14 at (538, 684), "0 of 2 tasks done", segments 0% / 50% / 50%, legend "1 to do 1 in progress 0 done"; "Website redesign" "1 of 4 tasks done", 25% / 25% / 50% | `getBoundingClientRect` captured in the browser before and after the change, compared as JSON (`IDENTICAL`); screenshot before |
+| V-48 | Tests after the refactoring | Auto | Everything passes | `npm test` 19 passed; `npm run build` OK; `npm run e2e` 4 passed, 1 skipped (Admin test, no test database) | Commands |
+
+### Examples of AI use (objective, developer decision, verification)
+
+1. **Own password change (Ex. 3).** *Objective:* plan the change of the user's own password. *AI suggestion:* refuse a new password equal to the current one in the API only (422 `SAME_AS_CURRENT`). *Decision (completed by the developer):* the interface must also refuse it with a clear message; the change-password page now checks it before sending and also shows the API answer. *Verification:* `AuthFlowTest` and `ChangePasswordPage.test.tsx`; tried in the browser. (`docs/ai-usage.md` #3)
+2. **Light theme of the interface (Ex. 7).** *Objective:* a modern design with a vintage detail, from the developer's references. *AI suggestion:* wheat `#E6D3A3` background with a cream board. *Decision (corrected by the developer):* the background was too yellow; greige `#E3DED6` chosen from three options, then a light-stone board `#F2F0EC` instead of beige. *Verification:* options compared side by side in the design canvas; contrast checked for WCAG AA; axe-core audit in Ex. 8 with no serious violations. (`docs/ai-usage.md` #5)
+3. **Bug after logout (Ex. 8).** *Objective:* find why an E2E test landed on the wrong page. *AI work:* reproduced it in the browser (`history.state` kept the previous page), located the cause in `RequireAuth`, and presented the diagnosis and a limited fix **before** changing files, as the Worksheet asks. *Decision:* the developer approved the fix with a regression test. *Verification:* the new test failed on the old code and passed with the fix; checked again in the browser; the E2E workaround was removed and the suite passed.
+
+### Run from a clean copy (README steps)
+
+| # | Check | Type | Expected | Observed | Evidence |
+|---|---|---|---|---|---|
+| V-54 | Fresh `git clone` of `feat/mvp` (commit `0b30476`), README followed step by step with its own `.env` (ports 5433, 1026/8026, 8082, 5175 so it did not clash with the developer's copy; separate Compose project `matriz-clean`, deleted afterwards) | Manual | Configuration, database, schema, seed, backend, frontend and tests work as written | `docker compose up -d`: db and Mailpit running; backend: Flyway V1, V2, V2.1 (demo data), `{"status":"UP"}`; `npm install` 0 vulnerabilities; frontend 200 and `/api` through the proxy; `./mvnw verify` 81 tests, 0 failures (the fixes came after this commit); `npm test` 19; `npm run build` OK; `npm run e2e` 4 passed, 1 skipped. **Problem found and fixed:** the README E2E command `source ../.env` failed (`parse error near '\n'`) because `.env.example` had `MATRIZ_MAIL_FROM=Matriz <no-reply@example.test>`; now `MATRIZ_MAIL_FROM=no-reply@example.test`, valid for the shell, Docker Compose and Spring; after the change the E2E run passed | Terminal output; logs |

@@ -82,7 +82,7 @@ PostgreSQL
 | Security | Login and logout, session timeout, lockout after 5 failed attempts, generic login error, per-request authorization (account role and project role). | FR1, NFR3, NFR4, A17, A18 |
 | Accounts | Admin creates, deactivates, reactivates and anonymises accounts; unique email; password reset with single-use tokens; own password change, forced at first login after an Admin-set password; creation of the pre-created accounts. | FR1a–FR1e, FR12, US9 |
 | Audit | Records every change to a user's account or memberships (read by the Admin) and every change inside a project (read by its Managers), in the same transaction as the change. | FR1d, FR13 |
-| Email adapter | Sends the reset email through SMTP, using backend email templates in European Portuguese and English chosen by `users.locale`; behind an interface so the provider can change. | FR1c, NFR1 |
+| Email adapter | Sends the reset email through SMTP, using plain-text messages in European Portuguese and English (in the backend) chosen by `users.locale`; behind an interface so the provider can change. | FR1c, NFR1 |
 | Projects | Project CRUD by Managers, membership, promote and demote, at least one Manager per project, visibility limited to members. | FR2–FR4, E4, E6 |
 | Tasks | Task CRUD with defaults (TODO, MEDIUM), delete rules, several assignees who must be members, search and filters. | FR5–FR8, FR10, E1, E5 |
 | Comments | Add and list comments with author and date; no edit or delete. | FR11, A14 |
@@ -109,5 +109,6 @@ Single list of pending technical decisions (constraints.md links here).
 Decided in Worksheet 03 (docs/implementation-plan.md, section 7): versions, build tools, local runtime, testing strategy, repository layout, pagination and how pre-created account passwords are provided (see section 4).
 
 - [P] Hosting beyond the local environment (Worksheet 05).
-- [P] End-to-end tests with Playwright (Worksheet 04).
-- [P] SMTP provider for the reset email (local test server proposed for the course); only for the optional increment 8.
+- [D] End-to-end tests with Playwright and an axe-core accessibility audit, adopted in Worksheet 03, Ex. 8 (`frontend/e2e`); Worksheet 04 can extend them.
+- [D] Reset email in development: Mailpit (local SMTP test server in `docker-compose.yml`), Worksheet 03, Ex. 8.
+- [P] SMTP provider and sender address for production.

@@ -57,7 +57,7 @@ Still pending: see [architecture.md](architecture.md), section 7 (single list of
 ## 5. Pending product decisions
 
 - Decided in Worksheet 03 (docs/implementation-plan.md, P6): the passwords of the pre-created accounts come from environment variables; the repository has only a `.env.example` with fictitious values.
-- Email sending for password reset: provider (SMTP server) and sender address. Proposed for the course: a local test mail server (e.g. Mailpit), no real emails sent. Only needed if the optional increment 8 is done (docs/implementation-plan.md, P9).
+- Email sending for password reset: decided in Worksheet 03 (Ex. 8) for development: Mailpit, a local test mail server in `docker-compose.yml`; no real emails are sent; sender `MATRIZ_MAIL_FROM`. Still pending: the SMTP provider and sender address for production.
 - How long the two logs are kept (currently indefinitely). To decide with the client.
 
 Decided in Worksheet 02: GDPR erasure is done by anonymising the deactivated account; its tasks and comments stay and show "Removed user" (see [database.md](database.md), section 5).
