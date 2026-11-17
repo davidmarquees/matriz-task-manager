@@ -1,9 +1,11 @@
 package pt.matriz.web;
 
+import java.sql.SQLException;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -22,7 +24,8 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 
 /**
  * Turns every error into Problem Details with the status codes of openapi.yaml (NFR5):
- * 400 malformed request or unknown field; 422 rule broken, wrong type or null; 500 generic.
+ * 400 malformed request, unknown field or a NUL character in the input; 422 rule broken, wrong type or null;
+ * 500 generic.
  * Standard Spring MVC errors (415, 405, 404 for unknown paths) are handled by the base class.
  */
 @RestControllerAdvice
@@ -45,6 +48,28 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(PatchBody.ApiException400.class)
     ResponseEntity<ProblemDetail> handleMalformedPatch(PatchBody.ApiException400 ex) {
         return problem(Problems.of(HttpStatus.BAD_REQUEST));
+    }
+
+    /**
+     * PostgreSQL cannot store the NUL character (U+0000) and refuses it with SQLSTATE 22021. Whatever the field
+     * or parameter (body, query string, login, search), that is a malformed request (400), not a server error
+     * (docs/quality-security-review.md, Q-6). The transaction is rolled back, so nothing is saved.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ResponseEntity<ProblemDetail> handleDataIntegrity(DataIntegrityViolationException ex) {
+        if (isNulCharacter(ex)) {
+            return problem(Problems.of(HttpStatus.BAD_REQUEST));
+        }
+        return handleUnexpected(ex);
+    }
+
+    private static boolean isNulCharacter(Throwable ex) {
+        for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SQLException sql && "22021".equals(sql.getSQLState())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @ExceptionHandler(Exception.class)

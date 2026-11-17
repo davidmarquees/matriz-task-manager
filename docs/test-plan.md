@@ -60,6 +60,8 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | T27 | GET a task or POST to a project that does not exist | 404, same body as for a foreign task (apart from `instance`); nothing saved | E4, D17 | I | `TaskCreateAndReadIT.aMissingTaskOrProjectLooksTheSameAsAForeignOne` | Covered (passed 2026-11-17) |
 | T28 | New task: without assignees; with assignees | `lastChange` is null in both cases (never changed; US15 "Criada") | FR14, US15, openapi `Task.lastChange` | I | `TaskCreateAndReadIT.aNewTaskWithoutAssigneesHasNoLastChange`; `.aNewTaskWithAssigneesHasNoLastChange` | Covered: regression test for finding Q-4, fixed 2026-11-17 |
 | T29 | Submit the create form with a title of only spaces (interface) | Error "O título é obrigatório…" shown, form kept, nothing saved (still empty after a reload) | US3 | E2E | `task-create.spec.ts` "a task without a title is not created and the title is flagged as mandatory" | Covered (passed 2026-11-17) |
+| T30 | A NUL character (U+0000) in a task title, project name, PATCH, search `q`, login or reset email | 400 Problem, nothing saved (never 500) | BadRequest (openapi.yaml), D28, NFR5 | I | `NulCharacterIT` (3 tests) | Covered: regression test for finding Q-6, fixed 2026-11-17 |
+| T31 | Create form with a title of only spaces (component) | Title input has `aria-invalid="true"` and is described by the error message; no request sent | US3 | C | `TasksSection.test.tsx` "flags the title field as invalid…" | Covered: regression test for finding Q-5, fixed 2026-11-17 |
 
 ### 2.4 Malformed requests and failures
 
@@ -98,3 +100,5 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | Ex. 4: all E2E, same app | `... npx playwright test` | 6 passed, 1 skipped (`admin.spec.ts`, needs `MATRIZ_E2E_ADMIN_PASSWORD`) |
 | Ex. 5: security | IDOR script with the two demo accounts (isolated app) | 24/24 as expected; no IDOR confirmed |
 | Ex. 5: static | `cd frontend && npm audit`; `npm run build`; `npm test` | 0 vulnerabilities; build OK; 19 tests passed |
+| Ex. 5: fix Q-5 | `cd frontend && npm test && npm run build` | 20 tests passed; build OK |
+| Ex. 5: fix Q-6 | `cd backend && ./mvnw verify` | Unit 9; integration 96; 0 failures, 0 skipped; `BUILD SUCCESS` |
