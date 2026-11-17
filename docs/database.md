@@ -383,7 +383,7 @@ Responses: **400** malformed request (invalid JSON, unknown field, non-numeric i
 | D13 | Member added twice to a project, including at the same time | Refused | DB PK | 409 |
 | D14 | Adding or appointing a deactivated user or the Admin account | Refused | backend | 422 |
 | D15 | Removed member added again | Allowed: new membership row; old assignments are not restored | DB PK (old row was deleted) | 201 |
-| D16 | Removing or demoting the last Manager (E6), including two Managers demoting each other at the same time | Refused | backend, with a row lock on the project | 409 |
+| D16 | Removing or demoting the last Manager (E6), including two Managers demoting each other at the same time | Refused. When two Managers demote each other at once, one succeeds; the other gets 409, or 403 if the first change was already saved when the request was checked (they are no longer a Manager, D10) | backend, with a row lock on the project | 409 (403) |
 | D17 | Non-member opens a project, task or comment by URL or API (E4) | Refused without revealing content | backend (membership check on every request) | 404 |
 | D18 | Removed member still has a page open | Next request refused | backend (membership not cached in the session) | 404 |
 | D19 | Reactivated user logs in | Sees no projects until added again (FR4) | backend | 200 |
