@@ -27,7 +27,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 @ActiveProfiles("test") // not "dev": no demo data, even if the local .env enables it
 @Transactional
-class SchemaMigrationTest {
+class SchemaMigrationIT {
 
     @Container
     static final PostgreSQLContainer<?> DB = PostgresTestDatabase.newContainer();

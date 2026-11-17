@@ -45,7 +45,7 @@ import pt.matriz.email.EmailSender;
 @AutoConfigureMockMvc
 @Testcontainers
 @ActiveProfiles("dev")
-class PasswordResetTest {
+class PasswordResetIT {
 
     @Container
     static final PostgreSQLContainer<?> DB = PostgresTestDatabase.newContainer();

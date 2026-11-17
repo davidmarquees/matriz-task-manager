@@ -46,7 +46,7 @@ import pt.matriz.PostgresTestDatabase;
 @AutoConfigureMockMvc
 @Testcontainers
 @ActiveProfiles("dev")
-class TasksApiTest {
+class TasksApiIT {
 
     @Container
     static final PostgreSQLContainer<?> DB = PostgresTestDatabase.newContainer();

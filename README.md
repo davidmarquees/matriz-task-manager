@@ -143,18 +143,17 @@ Never trust forwarded headers when the backend is reachable without the proxy: a
 
 ### Tests
 
-```bash
-cd backend
-./mvnw verify
-```
+Scenarios, expected results and the test linked to each: [docs/test-plan.md](docs/test-plan.md). Every command below runs without interaction (suitable for CI).
 
-Integration tests use Testcontainers: each test class starts its own empty PostgreSQL container, so Docker must be running and tests never depend on earlier runs or on the development database.
+| Level | Command (from `backend/` or `frontend/`) | Needs |
+|---|---|---|
+| Backend unit tests (`*Test`, Surefire) | `cd backend && ./mvnw test` | Java 21 |
+| Backend integration tests only (`*IT`, Failsafe) | `cd backend && ./mvnw verify -DskipUTs` | Java 21, Docker |
+| Backend, all tests | `cd backend && ./mvnw verify` | Java 21, Docker |
+| Frontend component tests and type-checked build | `cd frontend && npm test && npm run build` | Node |
+| End-to-end and accessibility | see below | Running app |
 
-```bash
-cd frontend
-npm test
-npm run build
-```
+Unit tests use no Spring context and no database. Integration tests use Testcontainers: each test class starts its own empty PostgreSQL container, so Docker must be running and tests never depend on earlier runs or on the development database. A single test class: `./mvnw test -Dtest=TextInputTest` or `./mvnw verify -DskipUTs -Dit.test=TasksApiIT`.
 
 Frontend tests use Vitest and Testing Library in a simulated browser (jsdom); they mock the API, so they need no backend.
 

@@ -31,7 +31,7 @@ import pt.matriz.PostgresTestDatabase;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @ActiveProfiles("dev")
-class SessionCookiesTest {
+class SessionCookiesIT {
 
     @Container
     static final PostgreSQLContainer<?> DB = PostgresTestDatabase.newContainer();

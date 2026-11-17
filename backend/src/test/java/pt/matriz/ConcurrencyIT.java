@@ -45,7 +45,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @AutoConfigureMockMvc
 @Testcontainers
 @ActiveProfiles("dev")
-class ConcurrencyTest {
+class ConcurrencyIT {
 
     static final int ROUNDS = 5;
 

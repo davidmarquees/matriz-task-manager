@@ -13,7 +13,7 @@
 | **C**: component | Vitest, Testing Library (jsdom) | Frontend components with the API mocked | Node |
 | **E2E** | Playwright (installed Chrome) + axe-core | User journeys through the running app | Running backend and frontend, demo accounts |
 
-Current state (2026-11-17): apart from `TextInputTest` (unit, Ex. 2), every backend test is an integration test, and Maven runs them all in one step. Approved for this worksheet: unit tests named `*Test` (Surefire, no Docker) and integration tests named `*IT` (Failsafe), so that Worksheet 05 can run them as separate CI steps. That change gets its own plan.
+Since 2026-11-17 (Ex. 3, part A): unit tests are named `*Test` and run with Surefire (`./mvnw test`, no Docker); integration tests are named `*IT` and run with Failsafe (`./mvnw verify -DskipUTs`), so that Worksheet 05 can run them as separate CI steps. The 16 Worksheet 03 test classes were renamed from `*Test` to `*IT`; older documents (verification.md) keep the old names. Commands: [README.md](../README.md#tests).
 
 ## 2. Scenarios: tasks and permissions (Ex. 1)
 
@@ -25,47 +25,47 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 
 | # | Input | Expected | Source | Level | Associated test | Status |
 |---|---|---|---|---|---|---|
-| T1★ | Create a task with title `"     "` | 422, `title` / `BLANK`; nothing saved | E5, D20 | U + I | I: `TasksApiTest.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
-| T2★ | Title with 2 characters (`"ab"`) | 422, `title` / `TOO_SHORT` | FR5, E5 | U + I | I: `TasksApiTest.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
-| T3★ | Title with 151 characters | 422, `title` / `TOO_LONG` | FR5, E5 | U + I | I: `TasksApiTest.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
+| T1★ | Create a task with title `"     "` | 422, `title` / `BLANK`; nothing saved | E5, D20 | U + I | I: `TasksApiIT.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
+| T2★ | Title with 2 characters (`"ab"`) | 422, `title` / `TOO_SHORT` | FR5, E5 | U + I | I: `TasksApiIT.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
+| T3★ | Title with 151 characters | 422, `title` / `TOO_LONG` | FR5, E5 | U + I | I: `TasksApiIT.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
 | T4★ | Title with exactly 3 and exactly 150 characters; `"  abc  "` | Accepted; stored trimmed as `abc` | FR5, A6 | U | `TextInputTest.acceptsAValidTitle`, `.acceptsTheShortestAndLongestTitles`, `.trimsSpacesBeforeCheckingTheLength` | Covered (passed 2026-11-17) |
-| T5★ | Create with `{}` (no title) | 422, `title` / `REQUIRED` | FR5, D20 | U + I | I: `TasksApiTest.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
-| T14 | Description with 2,001 characters; status `FINISHED`; priority `URGENT` | 422 with the field flagged | E7, D20 | I | `TasksApiTest.refusesInvalidTaskData` | Covered |
-| T23 | PATCH with an invalid title (blank, too short, too long, null) | 422; the stored title is unchanged | D20 | I | `TasksApiTest.anyMemberEditsAndStaleOrEmptyChangesAreHandled` (null only) | Partial |
+| T5★ | Create with `{}` (no title) | 422, `title` / `REQUIRED` | FR5, D20 | U + I | I: `TasksApiIT.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
+| T14 | Description with 2,001 characters; status `FINISHED`; priority `URGENT` | 422 with the field flagged | E7, D20 | I | `TasksApiIT.refusesInvalidTaskData` | Covered |
+| T23 | PATCH with an invalid title (blank, too short, too long, null) | 422; the stored title is unchanged | D20 | I | `TasksApiIT.anyMemberEditsAndStaleOrEmptyChangesAreHandled` (null only) | Partial |
 | T25 | Title made only of Unicode spaces (e.g. U+00A0); title of 150 characters that includes an emoji | Refused as blank ("not only spaces", A6); accepted if it has 150 characters (FR5 counts characters) | FR5, A6 | U | `TextInputTest.refusesATitleMadeOnlyOfNonBreakingSpaces`, `.countsAnEmojiAsOneCharacter` | Covered: regression tests for findings Q-1, Q-2, fixed 2026-11-17 |
 
 ### 2.2 Creation and reading
 
 | # | Input | Expected | Source | Level | Associated test | Status |
 |---|---|---|---|---|---|---|
-| T6★ | Member creates `{title}` in their project, then `GET /tasks/{id}` | 201 with `Location`; status TODO, priority MEDIUM, `createdBy` = session user; GET 200 with the same data; row in the database | US3, A5, FR5 | I | `TasksApiTest.memberCreatesATaskWithDefaultsThatIsSavedAndReadBack` | Covered (re-checked in Ex. 3) |
+| T6★ | Member creates `{title}` in their project, then `GET /tasks/{id}` | 201 with `Location`; status TODO, priority MEDIUM, `createdBy` = session user; GET 200 with the same data; row in the database | US3, A5, FR5 | I | `TasksApiIT.memberCreatesATaskWithDefaultsThatIsSavedAndReadBack` | Covered (re-checked in Ex. 3) |
 | T7★ | Log in → open project → create task | The task appears in `task-list` (`task-item`) | US3, Ex. 4 | E2E | `main-flow.spec.ts` "a Manager and a Member work on the same task" | Partial (dedicated flow in Ex. 4) |
-| T13 | Create with `createdBy` in the body | 400 (identity comes from the session) | Plan §4 | I | `TasksApiTest.refusesInvalidTaskData` | Covered |
-| T15 | PATCH with an old `version` | 409 `VERSION_CONFLICT` | D25 | I | `TasksApiTest.anyMemberEditsAndStaleOrEmptyChangesAreHandled` | Covered |
-| T20 | Assignee who is not a member, unknown or deactivated; the same assignee twice | Not a member, unknown or deactivated: 422 `NOT_A_PROJECT_MEMBER`. Already assigned: 409 `ALREADY_ASSIGNED`. Repeated id in `assigneeIds` on create: 422 `DUPLICATE` | FR8, D21, D22 | I | `TasksApiTest.assigneesMustBeActiveProjectMembers`, `AssigneesAndCommentsApiTest.onlyEligibleUsersCanBeAssigned`, `.severalAssigneesWithoutDuplicatesAndRemovableOneByOne`, `ConcurrencyTest.theSamePersonAssignedTwiceAtOnceIsSavedOnce` | Partial (deactivated user not checked) |
+| T13 | Create with `createdBy` in the body | 400 (identity comes from the session) | Plan §4 | I | `TasksApiIT.refusesInvalidTaskData` | Covered |
+| T15 | PATCH with an old `version` | 409 `VERSION_CONFLICT` | D25 | I | `TasksApiIT.anyMemberEditsAndStaleOrEmptyChangesAreHandled` | Covered |
+| T20 | Assignee who is not a member, unknown or deactivated; the same assignee twice | Not a member, unknown or deactivated: 422 `NOT_A_PROJECT_MEMBER`. Already assigned: 409 `ALREADY_ASSIGNED`. Repeated id in `assigneeIds` on create: 422 `DUPLICATE` | FR8, D21, D22 | I | `TasksApiIT.assigneesMustBeActiveProjectMembers`, `AssigneesAndCommentsApiIT.onlyEligibleUsersCanBeAssigned`, `.severalAssigneesWithoutDuplicatesAndRemovableOneByOne`, `ConcurrencyIT.theSamePersonAssignedTwiceAtOnceIsSavedOnce` | Partial (deactivated user not checked) |
 
 ### 2.3 Access and permissions
 
 | # | Input | Expected | Source | Level | Associated test | Status |
 |---|---|---|---|---|---|---|
-| T8★ | User who is not a project member: GET, PATCH, DELETE `/tasks/{id}`; GET and POST `/projects/{id}/tasks` | 404 without content; the database is unchanged | E4, D17 | I | `TasksApiTest.outsidersAndTheAdminCannotReachTasks` | Covered |
-| T9★ | Demo Member opens by id a task of "Annual report" (a project where only the demo Manager is a member) | 404; content not shown (IDOR with the two demo accounts) | E4, D17, US8 | I + E2E | `ProjectAccessTest.memberDoesNotSeeAProjectTheyDoNotBelongTo` (project only); `main-flow.spec.ts` D9 test (project page only) | Partial (task by id: Ex. 3 / Ex. 5) |
+| T8★ | User who is not a project member: GET, PATCH, DELETE `/tasks/{id}`; GET and POST `/projects/{id}/tasks` | 404 without content; the database is unchanged | E4, D17 | I | `TasksApiIT.outsidersAndTheAdminCannotReachTasks` | Covered |
+| T9★ | Demo Member opens by id a task of "Annual report" (a project where only the demo Manager is a member) | 404; content not shown (IDOR with the two demo accounts) | E4, D17, US8 | I + E2E | `ProjectAccessIT.memberDoesNotSeeAProjectTheyDoNotBelongTo` (project only); `main-flow.spec.ts` D9 test (project page only) | Partial (task by id: Ex. 3 / Ex. 5) |
 | T10★ | Any task endpoint without a session | 401 Problem JSON | US1, D8 | I | — (401 is checked only on `/auth/me`) | Planned (Ex. 3) |
-| T11 | Admin: GET a task, list a project's tasks | 403 | Plan §4, D11 | I | `TasksApiTest.outsidersAndTheAdminCannotReachTasks` | Covered |
-| T12 | Member deletes a task created by someone else; edits it | 403; 200 | D23, A13 | I | `TasksApiTest.onlyManagersOrTheCreatorDeleteTasks`, `.anyMemberEditsAndStaleOrEmptyChangesAreHandled` | Covered |
-| T16 | POST, PATCH or DELETE on tasks without the CSRF token | 403 | README "Session lifecycle" | I | — (only `AuthFlowTest.loginWithoutCsrfTokenIsRefused`) | Planned (Ex. 5) |
-| T17 | GET or PATCH a deleted task | 404 | D26 | I | `TasksApiTest.onlyManagersOrTheCreatorDeleteTasks` (GET only) | Partial |
-| T18 | Member removed from the project, with the session still open, reads or edits a task | 404 on the next request | D18 | I | `ProjectsApiTest.removingAMemberRemovesTheirAssignmentsButKeepsTheTasks` (project, after a new login) | Partial |
+| T11 | Admin: GET a task, list a project's tasks | 403 | Plan §4, D11 | I | `TasksApiIT.outsidersAndTheAdminCannotReachTasks` | Covered |
+| T12 | Member deletes a task created by someone else; edits it | 403; 200 | D23, A13 | I | `TasksApiIT.onlyManagersOrTheCreatorDeleteTasks`, `.anyMemberEditsAndStaleOrEmptyChangesAreHandled` | Covered |
+| T16 | POST, PATCH or DELETE on tasks without the CSRF token | 403 | README "Session lifecycle" | I | — (only `AuthFlowIT.loginWithoutCsrfTokenIsRefused`) | Planned (Ex. 5) |
+| T17 | GET or PATCH a deleted task | 404 | D26 | I | `TasksApiIT.onlyManagersOrTheCreatorDeleteTasks` (GET only) | Partial |
+| T18 | Member removed from the project, with the session still open, reads or edits a task | 404 on the next request | D18 | I | `ProjectsApiIT.removingAMemberRemovesTheirAssignmentsButKeepsTheTasks` (project, after a new login) | Partial |
 | T19 | Task creator removed from the project tries to delete their task; a Manager deletes it | 404 for the former member; 204 for the Manager | D24 | I | — | Planned (Ex. 3 or Ex. 5) |
 
 ### 2.4 Malformed requests and failures
 
 | # | Input | Expected | Source | Level | Associated test | Status |
 |---|---|---|---|---|---|---|
-| T21 | Invalid JSON, non-numeric id (`/tasks/abc`), `projectId` in a PATCH | 400 | BadRequest, D27 | I | `TasksApiTest.anyMemberEditsAndStaleOrEmptyChangesAreHandled` (`projectId`); `AuthFlowTest.malformedRequestsGetTheContractStatusCodes` (invalid JSON, login only) | Partial |
-| T22 | Task request with `Content-Type: text/plain` | 415 | openapi.yaml | I | `AuthFlowTest.malformedRequestsGetTheContractStatusCodes` (login only) | Partial |
-| T24 | List tasks with `size=101`, `size=0` or `page=-1` | 422 (contract: `page` ≥ 0, `size` 1 to 100) | P7 | I | `ProjectsApiTest.listsOnlyTheUsersProjectsWithSearchAndPagination` (projects, `size=101` only) | Partial |
-| T26 | Database error during a task request | 500 generic Problem, no internal details; nothing saved halfway | D28, D29, NFR5 | I | `FailureHandlingTest` (project list and activity log) | Covered (generic handler) |
+| T21 | Invalid JSON, non-numeric id (`/tasks/abc`), `projectId` in a PATCH | 400 | BadRequest, D27 | I | `TasksApiIT.anyMemberEditsAndStaleOrEmptyChangesAreHandled` (`projectId`); `AuthFlowIT.malformedRequestsGetTheContractStatusCodes` (invalid JSON, login only) | Partial |
+| T22 | Task request with `Content-Type: text/plain` | 415 | openapi.yaml | I | `AuthFlowIT.malformedRequestsGetTheContractStatusCodes` (login only) | Partial |
+| T24 | List tasks with `size=101`, `size=0` or `page=-1` | 422 (contract: `page` ≥ 0, `size` 1 to 100) | P7 | I | `ProjectsApiIT.listsOnlyTheUsersProjectsWithSearchAndPagination` (projects, `size=101` only) | Partial |
+| T26 | Database error during a task request | 500 generic Problem, no internal details; nothing saved halfway | D28, D29, NFR5 | I | `FailureHandlingIT` (project list and activity log) | Covered (generic handler) |
 
 ## 3. Decisions and assumptions
 
