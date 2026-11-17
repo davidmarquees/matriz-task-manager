@@ -49,7 +49,7 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | # | Input | Expected | Source | Level | Associated test | Status |
 |---|---|---|---|---|---|---|
 | T8★ | User who is not a project member: GET, PATCH, DELETE `/tasks/{id}`; GET and POST `/projects/{id}/tasks` | 404 without content; the database is unchanged | E4, D17 | I | `TasksApiIT.outsidersAndTheAdminCannotReachTasks` | Covered |
-| T9★ | Demo Member opens by id a task of "Annual report" (a project where only the demo Manager is a member) | 404; content not shown (IDOR with the two demo accounts) | E4, D17, US8 | I + E2E | `TaskCreateAndReadIT.theDemoMemberCannotReadOrChangeATaskOfAProjectTheyAreNotIn` (GET and PATCH → 404, database unchanged); `main-flow.spec.ts` D9 test (project page) | Covered at API level (passed 2026-11-17); manual check with two demo accounts in Ex. 5 |
+| T9★ | Demo Member opens by id a task of "Annual report" (a project where only the demo Manager is a member) | 404; content not shown (IDOR with the two demo accounts) | E4, D17, US8 | I + E2E | `TaskCreateAndReadIT.theDemoMemberCannotReadOrChangeATaskOfAProjectTheyAreNotIn` (GET and PATCH → 404, database unchanged); `main-flow.spec.ts` D9 test (project page) | Covered at API level (passed 2026-11-17); manual `curl` check with the two demo accounts in Ex. 5: 24/24 as expected (quality-security-review.md) |
 | T10★ | Any task endpoint without a session | 401 Problem JSON | US1, D8 | I | `TaskCreateAndReadIT.withoutASessionTaskEndpointsAnswer401` | Covered (passed 2026-11-17) |
 | T11 | Admin: GET a task, list a project's tasks | 403 | Plan §4, D11 | I | `TasksApiIT.outsidersAndTheAdminCannotReachTasks` | Covered |
 | T12 | Member deletes a task created by someone else; edits it | 403; 200 | D23, A13 | I | `TasksApiIT.onlyManagersOrTheCreatorDeleteTasks`, `.anyMemberEditsAndStaleOrEmptyChangesAreHandled` | Covered |
@@ -96,3 +96,5 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | Ex. 3: fix Q-4 | `cd backend && ./mvnw verify` | Unit 9 tests, 0 failures; integration 93 tests, 0 failures, 0 skipped; `BUILD SUCCESS` |
 | Ex. 4: E2E (isolated app: backend :8081 on database `matriz_e2e`, Vite :5174) | `cd frontend && set -a && source ../.env && set +a && MATRIZ_E2E_URL=http://localhost:5174 npx playwright test e2e/task-create.spec.ts` | Run 1: 2 passed; run 2: 2 passed (repeatable; no test project left in the database) |
 | Ex. 4: all E2E, same app | `... npx playwright test` | 6 passed, 1 skipped (`admin.spec.ts`, needs `MATRIZ_E2E_ADMIN_PASSWORD`) |
+| Ex. 5: security | IDOR script with the two demo accounts (isolated app) | 24/24 as expected; no IDOR confirmed |
+| Ex. 5: static | `cd frontend && npm audit`; `npm run build`; `npm test` | 0 vulnerabilities; build OK; 19 tests passed |
