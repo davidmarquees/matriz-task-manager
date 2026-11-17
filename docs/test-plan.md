@@ -25,7 +25,7 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 
 | # | Input | Expected | Source | Level | Associated test | Status |
 |---|---|---|---|---|---|---|
-| T1★ | Create a task with title `"     "` | 422, `title` / `BLANK`; nothing saved | E5, D20 | U + I | I: `TasksApiIT.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
+| T1★ | Create a task with title `"     "` | 422, `title` / `BLANK`; nothing saved | E5, D20 | U + I | I: `TasksApiIT.refusesInvalidTaskData`, `TaskCreateAndReadIT.aTitleMadeOnlyOfSpacesIsRefusedAndNothingIsSaved`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
 | T2★ | Title with 2 characters (`"ab"`) | 422, `title` / `TOO_SHORT` | FR5, E5 | U + I | I: `TasksApiIT.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
 | T3★ | Title with 151 characters | 422, `title` / `TOO_LONG` | FR5, E5 | U + I | I: `TasksApiIT.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
 | T4★ | Title with exactly 3 and exactly 150 characters; `"  abc  "` | Accepted; stored trimmed as `abc` | FR5, A6 | U | `TextInputTest.acceptsAValidTitle`, `.acceptsTheShortestAndLongestTitles`, `.trimsSpacesBeforeCheckingTheLength` | Covered (passed 2026-11-17) |
@@ -38,7 +38,7 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 
 | # | Input | Expected | Source | Level | Associated test | Status |
 |---|---|---|---|---|---|---|
-| T6★ | Member creates `{title}` in their project, then `GET /tasks/{id}` | 201 with `Location`; status TODO, priority MEDIUM, `createdBy` = session user; GET 200 with the same data; row in the database | US3, A5, FR5 | I | `TasksApiIT.memberCreatesATaskWithDefaultsThatIsSavedAndReadBack` | Covered (re-checked in Ex. 3) |
+| T6★ | Member creates `{title}` in their project, then `GET /tasks/{id}` | 201 with `Location`; status TODO, priority MEDIUM, `createdBy` = session user; GET 200 with the same data; row in the database | US3, A5, FR5 | I | `TasksApiIT.memberCreatesATaskWithDefaultsThatIsSavedAndReadBack`; `TaskCreateAndReadIT.memberCreatesATaskThatIsReturnedSavedAndReadBack` (all fields, `Location`, GET, database, list) | Covered (passed 2026-11-17) |
 | T7★ | Log in → open project → create task | The task appears in `task-list` (`task-item`) | US3, Ex. 4 | E2E | `main-flow.spec.ts` "a Manager and a Member work on the same task" | Partial (dedicated flow in Ex. 4) |
 | T13 | Create with `createdBy` in the body | 400 (identity comes from the session) | Plan §4 | I | `TasksApiIT.refusesInvalidTaskData` | Covered |
 | T15 | PATCH with an old `version` | 409 `VERSION_CONFLICT` | D25 | I | `TasksApiIT.anyMemberEditsAndStaleOrEmptyChangesAreHandled` | Covered |
@@ -49,14 +49,16 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | # | Input | Expected | Source | Level | Associated test | Status |
 |---|---|---|---|---|---|---|
 | T8★ | User who is not a project member: GET, PATCH, DELETE `/tasks/{id}`; GET and POST `/projects/{id}/tasks` | 404 without content; the database is unchanged | E4, D17 | I | `TasksApiIT.outsidersAndTheAdminCannotReachTasks` | Covered |
-| T9★ | Demo Member opens by id a task of "Annual report" (a project where only the demo Manager is a member) | 404; content not shown (IDOR with the two demo accounts) | E4, D17, US8 | I + E2E | `ProjectAccessIT.memberDoesNotSeeAProjectTheyDoNotBelongTo` (project only); `main-flow.spec.ts` D9 test (project page only) | Partial (task by id: Ex. 3 / Ex. 5) |
-| T10★ | Any task endpoint without a session | 401 Problem JSON | US1, D8 | I | — (401 is checked only on `/auth/me`) | Planned (Ex. 3) |
+| T9★ | Demo Member opens by id a task of "Annual report" (a project where only the demo Manager is a member) | 404; content not shown (IDOR with the two demo accounts) | E4, D17, US8 | I + E2E | `TaskCreateAndReadIT.theDemoMemberCannotReadOrChangeATaskOfAProjectTheyAreNotIn` (GET and PATCH → 404, database unchanged); `main-flow.spec.ts` D9 test (project page) | Covered at API level (passed 2026-11-17); manual check with two demo accounts in Ex. 5 |
+| T10★ | Any task endpoint without a session | 401 Problem JSON | US1, D8 | I | `TaskCreateAndReadIT.withoutASessionTaskEndpointsAnswer401` | Covered (passed 2026-11-17) |
 | T11 | Admin: GET a task, list a project's tasks | 403 | Plan §4, D11 | I | `TasksApiIT.outsidersAndTheAdminCannotReachTasks` | Covered |
 | T12 | Member deletes a task created by someone else; edits it | 403; 200 | D23, A13 | I | `TasksApiIT.onlyManagersOrTheCreatorDeleteTasks`, `.anyMemberEditsAndStaleOrEmptyChangesAreHandled` | Covered |
 | T16 | POST, PATCH or DELETE on tasks without the CSRF token | 403 | README "Session lifecycle" | I | — (only `AuthFlowIT.loginWithoutCsrfTokenIsRefused`) | Planned (Ex. 5) |
 | T17 | GET or PATCH a deleted task | 404 | D26 | I | `TasksApiIT.onlyManagersOrTheCreatorDeleteTasks` (GET only) | Partial |
 | T18 | Member removed from the project, with the session still open, reads or edits a task | 404 on the next request | D18 | I | `ProjectsApiIT.removingAMemberRemovesTheirAssignmentsButKeepsTheTasks` (project, after a new login) | Partial |
 | T19 | Task creator removed from the project tries to delete their task; a Manager deletes it | 404 for the former member; 204 for the Manager | D24 | I | — | Planned (Ex. 3 or Ex. 5) |
+| T27 | GET a task or POST to a project that does not exist | 404, same body as for a foreign task (apart from `instance`); nothing saved | E4, D17 | I | `TaskCreateAndReadIT.aMissingTaskOrProjectLooksTheSameAsAForeignOne` | Covered (passed 2026-11-17) |
+| T28 | New task: without assignees; with assignees | `lastChange` is null in both cases (never changed; US15 "Criada") | FR14, US15, openapi `Task.lastChange` | I | `TaskCreateAndReadIT.aNewTaskWithoutAssigneesHasNoLastChange`; `.aNewTaskWithAssigneesHasNoLastChange` (`@Disabled`) | Without: Covered. With: Failing, finding Q-4 (pending decision) |
 
 ### 2.4 Malformed requests and failures
 
@@ -88,3 +90,5 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | Ex. 2: unit | `cd backend && ./mvnw test -Dtest=TextInputTest` | 9 tests, 7 passed, 2 skipped (`@Disabled`: Q-1, Q-2) |
 | Ex. 2: full backend | `cd backend && ./mvnw verify` | 95 tests, 0 failures, 0 errors, 2 skipped; `BUILD SUCCESS` |
 | Ex. 2: fix Q-1, Q-2 | `cd backend && ./mvnw test -Dtest=TextInputTest`; `./mvnw verify` | 9 tests, 0 failures; full backend 95 tests, 0 failures, 0 skipped; `BUILD SUCCESS` |
+| Ex. 3: integration | `cd backend && ./mvnw verify -DskipUTs -Dit.test=TaskCreateAndReadIT` | 7 tests, 0 failures, 1 skipped (Q-4) |
+| Ex. 3: full backend | `cd backend && ./mvnw verify` | Unit 9 tests, 0 failures; integration 93 tests, 0 failures, 1 skipped (Q-4); `BUILD SUCCESS` |
