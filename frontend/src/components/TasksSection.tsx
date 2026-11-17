@@ -330,6 +330,7 @@ function CreateTaskForm({ projectId, onCreated, onClose }: { projectId: number; 
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [dueDate, setDueDate] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [titleInvalid, setTitleInvalid] = useState(false); // the title field is flagged (US3, Q-5)
   const [pending, setPending] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -341,14 +342,19 @@ function CreateTaskForm({ projectId, onCreated, onClose }: { projectId: number; 
     const trimmed = title.trim();
     if (!trimmed) {
       setError(t('tasks.titleRequired'));
+      setTitleInvalid(true);
+      titleRef.current?.focus();
       return;
     }
     if (trimmed.length < TASK_TITLE_MIN) {
       setError(t('tasks.titleTooShort', { min: TASK_TITLE_MIN }));
+      setTitleInvalid(true);
+      titleRef.current?.focus();
       return;
     }
     setPending(true);
     setError(null);
+    setTitleInvalid(false);
     try {
       const task = await createTask(projectId, {
         title,
@@ -367,6 +373,7 @@ function CreateTaskForm({ projectId, onCreated, onClose }: { projectId: number; 
       titleRef.current?.focus();
     } catch (e) {
       setError(taskErrorMessage(t, e)); // the form keeps what was typed
+      setTitleInvalid(e instanceof ApiError && e.fieldCode('title') !== undefined);
     } finally {
       setPending(false);
     }
@@ -382,7 +389,15 @@ function CreateTaskForm({ projectId, onCreated, onClose }: { projectId: number; 
       </div>
       <label className="field">
         {t('tasks.titleLabel')}
-        <input ref={titleRef} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={TASK_TITLE_MAX} data-testid="task-title-input" />
+        <input
+          ref={titleRef}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          maxLength={TASK_TITLE_MAX}
+          aria-invalid={titleInvalid ? true : undefined}
+          aria-describedby={titleInvalid && error ? 'task-create-error' : undefined}
+          data-testid="task-title-input"
+        />
       </label>
       <label className="field">
         <span>{t('tasks.description')} <span className="hint">({t('common.optional')})</span></span>
@@ -421,9 +436,11 @@ function CreateTaskForm({ projectId, onCreated, onClose }: { projectId: number; 
         </label>
       </div>
       {error && (
-        <Alert kind="error" testId="task-create-error">
-          {error}
-        </Alert>
+        <div id="task-create-error">
+          <Alert kind="error" testId="task-create-error">
+            {error}
+          </Alert>
+        </div>
       )}
       <div className="row">
         <button type="submit" className="btn btn-primary" disabled={pending} data-testid="task-create-submit">

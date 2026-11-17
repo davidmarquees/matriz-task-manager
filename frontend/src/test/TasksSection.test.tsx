@@ -39,3 +39,25 @@ describe('TasksSection filters (US6)', () => {
     await waitFor(() => expect(api.mock.calls.some(([url]) => String(url).includes('status=IN_PROGRESS'))).toBe(true));
   });
 });
+
+describe('TasksSection create form (US3, Q-5)', () => {
+  it('flags the title field as invalid and links it to the message when the title is only spaces', async () => {
+    const api = mockApi({
+      'GET /auth/me': { status: 200, body: demoUser },
+      'GET /projects/7/members': { status: 200, body: [] },
+      'GET /projects/7/tasks': { status: 200, body: emptyPage },
+    });
+    renderWithApp(<TasksSection projectId={7} onTasksChanged={() => undefined} />);
+
+    fireEvent.click(await screen.findByTestId('task-create-open'));
+    const input = await screen.findByTestId('task-title-input');
+    expect(input).not.toHaveAttribute('aria-invalid');
+    fireEvent.change(input, { target: { value: '   ' } });
+    fireEvent.click(screen.getByTestId('task-create-submit'));
+
+    expect(await screen.findByTestId('task-create-error')).toHaveTextContent('O título é obrigatório');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAccessibleDescription(/O título é obrigatório/);
+    expect(api.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'POST')).toBe(false);
+  });
+});
