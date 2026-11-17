@@ -37,7 +37,7 @@ import pt.matriz.PostgresTestDatabase;
 @AutoConfigureMockMvc
 @Testcontainers
 @ActiveProfiles("dev")
-class AuthFlowTest {
+class AuthFlowIT {
 
     static final String DEMO_PASSWORD = "test-demo-password";
 
@@ -47,7 +47,7 @@ class AuthFlowTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         PostgresTestDatabase.register(registry, DB);
-        registry.add("matriz.login.rate-limit.max-attempts", () -> "1000"); // tested in LoginRateLimitTest
+        registry.add("matriz.login.rate-limit.max-attempts", () -> "1000"); // tested in LoginRateLimitIT
     }
 
     @Autowired
@@ -88,7 +88,7 @@ class AuthFlowTest {
         mvc.perform(get("/auth/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string("Content-Type", containsString("application/problem+json")));
-        // The cookies themselves are checked over real HTTP in SessionCookiesTest.
+        // The cookies themselves are checked over real HTTP in SessionCookiesIT.
     }
 
     @Test

@@ -143,18 +143,17 @@ Never trust forwarded headers when the backend is reachable without the proxy: a
 
 ### Tests
 
-```bash
-cd backend
-./mvnw verify
-```
+Scenarios, expected results and the test linked to each: [docs/test-plan.md](docs/test-plan.md). Every command below runs without interaction (suitable for CI).
 
-Integration tests use Testcontainers: each test class starts its own empty PostgreSQL container, so Docker must be running and tests never depend on earlier runs or on the development database.
+| Level | Command (from `backend/` or `frontend/`) | Needs |
+|---|---|---|
+| Backend unit tests (`*Test`, Surefire) | `cd backend && ./mvnw test` | Java 21 |
+| Backend integration tests only (`*IT`, Failsafe) | `cd backend && ./mvnw verify -DskipUTs` | Java 21, Docker |
+| Backend, all tests | `cd backend && ./mvnw verify` | Java 21, Docker |
+| Frontend component tests and type-checked build | `cd frontend && npm test && npm run build` | Node |
+| End-to-end and accessibility | see below | Running app |
 
-```bash
-cd frontend
-npm test
-npm run build
-```
+Unit tests use no Spring context and no database. Integration tests use Testcontainers: each test class starts its own empty PostgreSQL container, so Docker must be running and tests never depend on earlier runs or on the development database. A single test class: `./mvnw test -Dtest=TextInputTest` or `./mvnw verify -DskipUTs -Dit.test=TasksApiIT`.
 
 Frontend tests use Vitest and Testing Library in a simulated browser (jsdom); they mock the API, so they need no backend.
 
@@ -168,7 +167,7 @@ set -a; source ../.env; set +a
 npm run e2e
 ```
 
-`MATRIZ_E2E_URL` changes the address (default <http://localhost:5173>). Many runs in a row reach the login rate limit (20 per 15 minutes); for a local test backend start it with `MATRIZ_LOGIN_RATELIMIT_MAXATTEMPTS=1000`. The HTML report is in `frontend/playwright-report` (git-ignored).
+One spec only: `npx playwright test e2e/task-create.spec.ts`. `MATRIZ_E2E_URL` changes the address (default <http://localhost:5173>); to keep the development database clean, run a second backend on another port with its own database and point a second Vite server at it (`MATRIZ_BACKEND_URL=http://localhost:8081 npx vite --port 5174`, then `MATRIZ_E2E_URL=http://localhost:5174`). Many runs in a row reach the login rate limit (20 per 15 minutes); for a local test backend start it with `MATRIZ_LOGIN_RATELIMIT_MAXATTEMPTS=1000`. The HTML report is in `frontend/playwright-report` (git-ignored).
 
 ## Current status
 

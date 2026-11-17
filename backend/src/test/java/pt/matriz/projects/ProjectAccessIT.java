@@ -22,7 +22,7 @@ import pt.matriz.web.ApiException;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Testcontainers
 @ActiveProfiles("dev")
-class ProjectAccessTest {
+class ProjectAccessIT {
 
     @Container
     static final PostgreSQLContainer<?> DB = PostgresTestDatabase.newContainer();

@@ -38,7 +38,7 @@ import pt.matriz.PostgresTestDatabase;
 @AutoConfigureMockMvc
 @Testcontainers
 @ActiveProfiles("dev")
-class AdminApiTest {
+class AdminApiIT {
 
     @Container
     static final PostgreSQLContainer<?> DB = PostgresTestDatabase.newContainer();

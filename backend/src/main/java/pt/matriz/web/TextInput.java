@@ -2,7 +2,9 @@ package pt.matriz.web;
 
 /**
  * Validation of text fields (A6, A20, docs/database.md): values are trimmed before the length rules
- * are applied; text made only of spaces counts as blank.
+ * are applied; text made only of spaces counts as blank. "Spaces" include Unicode space characters such as
+ * the non-breaking space (U+00A0), and lengths count characters (code points), as the contract does
+ * (docs/quality-security-review.md, Q-1 and Q-2).
  */
 public final class TextInput {
 
@@ -14,14 +16,15 @@ public final class TextInput {
         if (value == null) {
             throw ApiException.invalid(field, "REQUIRED");
         }
-        String trimmed = value.trim();
+        String trimmed = trim(value);
         if (trimmed.isEmpty()) {
             throw ApiException.invalid(field, "BLANK");
         }
-        if (trimmed.length() < min) {
+        int length = length(trimmed);
+        if (length < min) {
             throw ApiException.invalid(field, "TOO_SHORT");
         }
-        if (trimmed.length() > max) {
+        if (length > max) {
             throw ApiException.invalid(field, "TOO_LONG");
         }
         return trimmed;
@@ -29,13 +32,46 @@ public final class TextInput {
 
     /** Optional text: null or only spaces is stored as null; 422 TOO_LONG above the maximum. */
     public static String optional(String value, String field, int max) {
-        if (value == null || value.isBlank()) {
+        if (value == null) {
             return null;
         }
-        String trimmed = value.trim();
-        if (trimmed.length() > max) {
+        String trimmed = trim(value);
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if (length(trimmed) > max) {
             throw ApiException.invalid(field, "TOO_LONG");
         }
         return trimmed;
+    }
+
+    private static boolean isSpace(int codePoint) {
+        return Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint);
+    }
+
+    /** Removes leading and trailing spaces, including Unicode ones that {@link String#trim()} keeps. */
+    private static String trim(String value) {
+        int start = 0;
+        int end = value.length();
+        while (start < end) {
+            int codePoint = value.codePointAt(start);
+            if (!isSpace(codePoint)) {
+                break;
+            }
+            start += Character.charCount(codePoint);
+        }
+        while (end > start) {
+            int codePoint = value.codePointBefore(end);
+            if (!isSpace(codePoint)) {
+                break;
+            }
+            end -= Character.charCount(codePoint);
+        }
+        return value.substring(start, end);
+    }
+
+    /** Number of characters (code points), so an emoji counts as one. */
+    private static int length(String value) {
+        return value.codePointCount(0, value.length());
     }
 }

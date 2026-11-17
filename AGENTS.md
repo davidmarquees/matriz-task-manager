@@ -23,7 +23,9 @@ Configuration comes from `.env` (copy `.env.example`; fictitious values only). J
 | Database and local mail catcher (PostgreSQL 16, Mailpit UI on :8025) | `docker compose up -d` |
 | Backend: schema (Flyway), dev seed and API on :8080/api | `cd backend && ./mvnw spring-boot:run` |
 | Frontend on :5173 (proxy `/api` → backend) | `cd frontend && npm install && npm run dev` |
-| Backend tests (Testcontainers; Docker must run) | `cd backend && ./mvnw verify` |
+| Backend unit tests (`*Test`; no Docker) | `cd backend && ./mvnw test` |
+| Backend integration tests only (`*IT`; Testcontainers, Docker must run) | `cd backend && ./mvnw verify -DskipUTs` |
+| Backend, all tests (Docker must run) | `cd backend && ./mvnw verify` |
 | Frontend tests and type-checked build | `cd frontend && npm test && npm run build` |
 | End-to-end and accessibility tests (app running; `MATRIZ_DEMO_PASSWORD` from `.env`) | `cd frontend && set -a && source ../.env && set +a && npm run e2e` |
 | API contract lint | `npx --yes @redocly/cli@latest lint openapi.yaml` |

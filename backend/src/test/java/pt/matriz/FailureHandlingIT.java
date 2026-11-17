@@ -45,7 +45,7 @@ import pt.matriz.tasks.TaskCounts;
 @AutoConfigureMockMvc
 @Testcontainers
 @ActiveProfiles("dev")
-class FailureHandlingTest {
+class FailureHandlingIT {
 
     @Container
     static final PostgreSQLContainer<?> DB = PostgresTestDatabase.newContainer();

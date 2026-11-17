@@ -25,7 +25,7 @@ import pt.matriz.accounts.AdminAccountInitializer;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Testcontainers
 @ActiveProfiles("dev")
-class DevSeedTest {
+class DevSeedIT {
 
     @Container
     static final PostgreSQLContainer<?> DB = PostgresTestDatabase.newContainer();

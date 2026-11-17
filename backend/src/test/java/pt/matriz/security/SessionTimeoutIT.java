@@ -38,8 +38,8 @@ import pt.matriz.PostgresTestDatabase;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @ActiveProfiles("dev")
-@Import(SessionTimeoutTest.ShortSessions.class)
-class SessionTimeoutTest {
+@Import(SessionTimeoutIT.ShortSessions.class)
+class SessionTimeoutIT {
 
     @Container
     static final PostgreSQLContainer<?> DB = PostgresTestDatabase.newContainer();
