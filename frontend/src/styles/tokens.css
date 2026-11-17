@@ -1,0 +1,86 @@
+/*
+ * Design tokens (approved design, 2026-11-16): greige background, light-stone board, earthy accents.
+ * Light and dark themes; "Auto" follows the system (NFR8). All text pairs meet WCAG AA (4.5:1).
+ */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #e3ded6;              /* greige */
+  --board: rgba(242, 240, 236, 0.9); /* light stone */
+  --board-line: rgba(255, 255, 255, 0.7);
+  --card: #ffffff;
+  --card-line: rgba(43, 43, 43, 0.08);
+  --soft: #efe9df;
+  --input: #faf8f4;
+  --input-line: #cfc6b8;
+  --ink: #2b2b2b;             /* charcoal */
+  --ink-2: #5c564d;           /* secondary text, 6.4:1 on white */
+  --line: #e4ddd1;
+  --brick: #a8432f;           /* main action; white text 6.0:1 */
+  --brick-text: #8f3524;      /* brick for small text on light surfaces */
+  --on-brick: #ffffff;
+  --pine: #20483a;            /* done; white text 10.3:1 */
+  --on-pine: #ffffff;
+  --ochre: #845a0e;           /* in progress */
+  --ochre-bg: #f3e3bf;
+  --hatch: #2b2b2b;           /* to do */
+  --dark-card: #2b2b2b;
+  --on-dark: #f7f0e1;
+  --on-dark-2: #d9cdb4;
+  --focus: #a8432f;
+  --danger: #8f3524;
+  --danger-bg: #f6e3dc;
+  --success: #20483a;
+  --success-bg: #e2ece6;
+  --shadow: 0 40px 80px -40px rgba(43, 43, 43, 0.3);
+  --tile-shadow: 0 1px 2px rgba(43, 43, 43, 0.06);
+  --overlay: rgba(43, 43, 43, 0.45);
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232b2b2b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #1e1d1b;
+  --board: rgba(43, 42, 39, 0.82);
+  --board-line: rgba(255, 255, 255, 0.06);
+  --card: #33312d;
+  --card-line: transparent;
+  --soft: #2b2a27;
+  --input: #2b2a27;
+  --input-line: #57534b;
+  --ink: #f1e7d0;
+  --ink-2: #c9bea6;
+  --line: #45423c;
+  --brick: #d2694f;
+  --brick-text: #e3936a;
+  --on-brick: #1a1918;
+  --pine: #7db39a;
+  --on-pine: #1a1918;
+  --ochre: #e3b867;
+  --ochre-bg: #3b3222;
+  --hatch: #f1e7d0;
+  --dark-card: #e6d3a3;
+  --on-dark: #2b2b2b;
+  --on-dark-2: #4a453e;
+  --focus: #e3936a;
+  --danger: #ee9a80;
+  --danger-bg: #43271f;
+  --success: #93c8a0;
+  --success-bg: #22332a;
+  --shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.6);
+  --tile-shadow: none;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f1e7d0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+:root {
+  --font-display: 'Anton', Impact, 'Arial Narrow', sans-serif;
+  --font-body: 'Inter Variable', Inter, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --radius-board: 36px;
+  --radius-card: 24px;
+  --radius-field: 14px;
+  /* every form control: search, inputs, dropdowns */
+  --control-height: 46px;
+  --control-radius: 14px;
+}

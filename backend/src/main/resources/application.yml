@@ -1,0 +1,94 @@
+# Matriz backend configuration.
+# Every value that depends on the environment comes from an environment variable.
+# For local development the variables can be kept in the .env file at the repository root
+# (copy .env.example); real environment variables take precedence over that file.
+spring:
+  application:
+    name: matriz
+  profiles:
+    # "dev" adds the demo data (application-dev.yml); empty in production.
+    active: ${MATRIZ_PROFILE:}
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  datasource:
+    # Runtime connection: application database user (no UPDATE or DELETE on the logs, D39).
+    url: ${MATRIZ_DB_URL}
+    username: ${MATRIZ_DB_APP_USER}
+    password: ${MATRIZ_DB_APP_PASSWORD}
+  flyway:
+    # Migrations run as the database owner; the application user only gets the grants in V2.
+    user: ${MATRIZ_DB_OWNER_USER}
+    password: ${MATRIZ_DB_OWNER_PASSWORD}
+    locations: classpath:db/migration
+    placeholders:
+      appUser: ${MATRIZ_DB_APP_USER}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  mail:
+    # Development: Mailpit (docker-compose.yml), no real emails are sent
+    host: ${MATRIZ_MAIL_HOST:localhost}
+    port: ${MATRIZ_MAIL_PORT:1025}
+    username: ${MATRIZ_MAIL_USERNAME:}
+    password: ${MATRIZ_MAIL_PASSWORD:}
+  mvc:
+    problemdetails:
+      enabled: true
+  jackson:
+    deserialization:
+      # Unknown fields are a malformed request (400), see openapi.yaml
+      fail-on-unknown-properties: true
+    mapper:
+      # A wrong JSON type (e.g. a number for a text field) is refused with 422, not converted
+      allow-coercion-of-scalars: false
+
+server:
+  port: ${MATRIZ_SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+    session:
+      timeout: 30m # A18: 30 minutes of inactivity
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${MATRIZ_COOKIE_SECURE:false}
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  health:
+    mail:
+      enabled: false # the mail server being down must not mark the application as down (D36)
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+matriz:
+  cookie-secure: ${MATRIZ_COOKIE_SECURE:false}
+  # Address of the interface, used in the password reset link
+  app-url: ${MATRIZ_APP_URL:http://localhost:5173}
+  mail-from: ${MATRIZ_MAIL_FROM:Matriz <no-reply@example.test>}
+  password-reset:
+    expiry: 30m # A22
+    max-per-hour: 3 # A22, D31
+  login:
+    rate-limit:
+      # Login attempts per client IP address in the window; above that, 429
+      max-attempts: 20
+      window: 15m
+    # A17: 5 failed attempts in a row lock the account for 15 minutes
+    max-failed-attempts: 5
+    lock-duration: 15m
+  admin:
+    # Admin account created at the first start when no Admin exists (A25). Must change the password at first login.
+    name: ${MATRIZ_ADMIN_NAME:}
+    email: ${MATRIZ_ADMIN_EMAIL:}
+    password: ${MATRIZ_ADMIN_PASSWORD:}

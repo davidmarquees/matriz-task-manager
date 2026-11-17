@@ -34,9 +34,9 @@
 | FR5–FR7 tasks, status, priority | tasks | defaults and `CHECK` constraints |
 | FR8 several assignees | task_assignees | |
 | FR9 dashboard | tasks, project_members | count by `status` per project of the user; no table needed |
-| FR10 search and filters | tasks, task_assignees | query, no table needed |
+| FR10 search and filters | tasks, task_assignees, projects | query, no table needed; project search by name within the user's projects |
 | FR11 comments | comments | |
-| FR12 pre-created accounts | users | Admin from environment variables at first start; demo accounts seeded only in development (A25) |
+| FR12 pre-created accounts | users, projects, project_members, tasks | Admin from environment variables at first start; demo accounts, 2 demo projects and their tasks seeded only in development (A25) |
 
 Every requirement is covered; no other entity is needed for the MVP. Sessions are not stored in the database (see section 7).
 
@@ -65,7 +65,7 @@ Conventions [A]: primary keys are `bigint` identity columns; timestamps are `tim
 | name | varchar(100) [A] | mandatory, not only spaces; `NULL` only when `status = ANONYMISED` |
 | email | varchar(254) | mandatory; unique, case-insensitive (`UNIQUE (lower(email))`), across all accounts — US9; replaced by `removed-<id>@invalid` when anonymised |
 | password_hash | varchar(100) | BCrypt hash, never plain text — NFR3; `NULL` only when anonymised |
-| must_change_password | boolean | default `true`; set when the Admin sets the password; cleared when the user changes it — FR1e |
+| must_change_password | boolean | default `true`; set when the Admin sets the password; cleared when the user changes it — FR1e. The development seed creates the demo accounts with `false` (A25) |
 | account_role | varchar(10) | `ADMIN`, `MANAGER` or `MEMBER` — FR1a |
 | status | varchar(15) | `ACTIVE`, `DEACTIVATED` or `ANONYMISED`; default `ACTIVE` — FR1b |
 | locale | varchar(5) | interface language: `pt-PT` or `en`; default `pt-PT` — NFR1 |
@@ -415,7 +415,8 @@ New users and users added later are not affected by existing data: their access 
 - [A] `bigint` identity keys (simple, enough for NFR2). Alternative: UUID, which hides how many records exist.
 - [A] Titles are trimmed before saving; the length rule applies to the trimmed value.
 - [A] Field lengths not set by the requirements (user and project name 100, comment 2,000).
-- [A] Search (FR10) uses case-insensitive `ILIKE` on title and description; enough for 1,000 tasks. Index on `tasks (project_id, status)` for the dashboard (FR9).
+- [A] Search (FR10) uses case-insensitive `ILIKE` on task title and description and on project name (within the user's projects); enough for 1,000 tasks, no extra index. Index on `tasks (project_id, status)` for the dashboard (FR9).
+- [D] Development seed (A25): a Flyway migration in a `dev`-only location, so it runs once and never wipes data. It creates the demo Manager and Member accounts (`must_change_password = false`, fictitious data, passwords from environment variables), 2 demo projects (one with both demo users, one with the Manager only) and a few tasks in each status. Approved in docs/implementation-plan.md (M1–M3).
 - [A] The Admin account is never a project member; it sees project names and members (to appoint Managers) but not tasks or comments.
 - [A] Expired and used reset tokens are deleted after 30 days; the audit log is kept indefinitely.
 - [A] The reset email is sent during the request (no queue); fine at this scale.
@@ -423,6 +424,7 @@ New users and users added later are not affected by existing data: their access 
 
 ## 8. Pending decisions
 
-- [P] Endpoint to read a project's activity log (paginated), to add with the other endpoints.
+- [D] Pagination of project and task lists: `page`, `size` (max 100), `totalItems` (openapi.yaml; implementation-plan.md P7).
+- [D] Endpoint to read a project's activity log (paginated, project Managers): `GET /projects/{projectId}/activity`, openapi.yaml 0.6.0 (Worksheet 03, Ex. 8).
 
 - [P] How long the logs are kept (constraints.md, section 5).

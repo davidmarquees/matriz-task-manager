@@ -12,7 +12,7 @@
 | US3 | As a project member, I want to create, edit and delete tasks with a title, status and priority, so that I can manage the work. | FR5–FR7 | High |
 | US4 | As a project member, I want to assign a task to one or more members, so that it is clear who does it. | FR8 | High |
 | US5 | As a project member, I want to see a dashboard with my projects and the number of tasks in each status, so that I can track progress. | FR9 | High |
-| US6 | As a project member, I want to search tasks by text and filter them by status, priority and assignee, so that I find what I need. | FR10 | Medium |
+| US6 | As a project member, I want to search projects by name, and search tasks by text and filter them by status, priority and assignee, so that I find what I need. | FR10 | Medium |
 | US7 | As a project member, I want to comment on a task, so that I can communicate in its context. | FR11 | Medium |
 | US8 | As a Manager or Member testing the system, I want two demo accounts (Manager and Member), so that I can test the permissions. | FR12 | Medium |
 | US9 | As an Admin, I want to create an account for each new employee and assign it the Manager or Member role, so that they can access Matriz with the right permissions. | FR1a | High |
@@ -21,6 +21,7 @@
 | US12 | As an Admin or a project Manager, I want to see who changed what and when, so that every change can be traced. | FR1d, FR13 | High |
 | US13 | As a user, I want to choose the language (Português or English) and the theme (light, dark or automatic), so that the interface suits me. | NFR1, NFR8 | Medium |
 | US14 | As a user, I want to use Matriz in a mobile browser, so that I can follow the work away from my desk. | NFR7 | Medium |
+| US15 | As a project member, I want to see when a task was last changed, and as a Manager also who changed it and what, so that I can follow recent work without opening the activity log. | FR14 (extra) | Low |
 
 ## 2. Acceptance criteria
 
@@ -51,6 +52,7 @@
 - **Given** a project with tasks titled "Fix login" and "Write report", **When** I search for "login", **Then** only "Fix login" is listed.
 - **Given** tasks with different statuses and priorities, **When** I filter by status IN_PROGRESS and priority HIGH, **Then** only tasks matching both are listed.
 - **Given** a task assigned to me and one that is not, **When** I filter by assignee = me, **Then** only my task is listed.
+- **Given** I am a member of projects named "Website redesign" and "Annual report", **When** I search projects for "web", **Then** only "Website redesign" is listed, and never a project I am not a member of.
 
 ### US7 — Comments
 - **Given** I am a project member, **When** I add a comment to a task, **Then** it appears on the task with my name and the date.
@@ -89,6 +91,12 @@
 
 ### US14 — Mobile
 - **Given** a browser 360 px wide, **When** I open the dashboard, **Then** every element is usable without horizontal scrolling.
+
+### US15 — Last change of a task (extra)
+- **Given** a Member changed a task's status today, **When** any member of the project sees the task, **Then** it shows "Alterada hoje".
+- **Given** the same change, **When** a project Manager hovers, focuses or taps the note, **Then** it shows who made the change and "Estado: A fazer → Em curso".
+- **Given** the same change, **When** a Member hovers the note, **Then** no name or values are shown (A23).
+- **Given** a task that was never changed, **When** I see it, **Then** it shows "Criada" with its creation date.
 
 ## 3. Exceptional and edge cases
 
