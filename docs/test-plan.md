@@ -32,7 +32,7 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 | T5★ | Create with `{}` (no title) | 422, `title` / `REQUIRED` | FR5, D20 | U + I | I: `TasksApiTest.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
 | T14 | Description with 2,001 characters; status `FINISHED`; priority `URGENT` | 422 with the field flagged | E7, D20 | I | `TasksApiTest.refusesInvalidTaskData` | Covered |
 | T23 | PATCH with an invalid title (blank, too short, too long, null) | 422; the stored title is unchanged | D20 | I | `TasksApiTest.anyMemberEditsAndStaleOrEmptyChangesAreHandled` (null only) | Partial |
-| T25 | Title made only of Unicode spaces (e.g. U+00A0); title of 150 characters that includes an emoji | Refused as blank ("not only spaces", A6); accepted if it has 150 characters (FR5 counts characters) | FR5, A6 | U | `TextInputTest.refusesATitleMadeOnlyOfNonBreakingSpaces`, `.countsAnEmojiAsOneCharacter` (`@Disabled`) | Failing: findings Q-1, Q-2 (pending decision) |
+| T25 | Title made only of Unicode spaces (e.g. U+00A0); title of 150 characters that includes an emoji | Refused as blank ("not only spaces", A6); accepted if it has 150 characters (FR5 counts characters) | FR5, A6 | U | `TextInputTest.refusesATitleMadeOnlyOfNonBreakingSpaces`, `.countsAnEmojiAsOneCharacter` | Covered: regression tests for findings Q-1, Q-2, fixed 2026-11-17 |
 
 ### 2.2 Creation and reading
 
@@ -78,7 +78,7 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 ## 4. Not covered by this plan (limits)
 
 - Performance with 50 users and 1,000 tasks (NFR2), browsers other than Chrome, and security beyond access control (e.g. dependency vulnerabilities) are not proved by these tests. They are recorded as not verified.
-- The two Unicode suspicions of Ex. 1 (T25) were confirmed at unit level in Ex. 2: findings Q-1 and Q-2 in [quality-security-review.md](quality-security-review.md). Their tests are `@Disabled` until David decides.
+- The two Unicode suspicions of Ex. 1 (T25) were confirmed at unit level in Ex. 2: findings Q-1 and Q-2 in [quality-security-review.md](quality-security-review.md). Both were fixed on 2026-11-17 (approved by David). The interface limit (Q-3) stays recorded, not fixed.
 - Areas outside tasks and permissions (accounts, password reset, logs, dashboard) are covered by the Worksheet 03 tests listed in [verification.md](verification.md) and are not repeated here.
 
 ## 5. Results by exercise
@@ -87,3 +87,4 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 |---|---|---|
 | Ex. 2: unit | `cd backend && ./mvnw test -Dtest=TextInputTest` | 9 tests, 7 passed, 2 skipped (`@Disabled`: Q-1, Q-2) |
 | Ex. 2: full backend | `cd backend && ./mvnw verify` | 95 tests, 0 failures, 0 errors, 2 skipped; `BUILD SUCCESS` |
+| Ex. 2: fix Q-1, Q-2 | `cd backend && ./mvnw test -Dtest=TextInputTest`; `./mvnw verify` | 9 tests, 0 failures; full backend 95 tests, 0 failures, 0 skipped; `BUILD SUCCESS` |

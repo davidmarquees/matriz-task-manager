@@ -3,7 +3,6 @@ package pt.matriz.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
@@ -71,13 +70,11 @@ class TextInputTest {
     }
 
     @Test
-    @Disabled("Fails: finding Q-1 in docs/quality-security-review.md (pending decision)")
     void refusesATitleMadeOnlyOfNonBreakingSpaces() { // T25: "not only spaces" (A6) includes Unicode spaces
         assertRefused("\u00A0\u00A0\u00A0\u00A0", "BLANK");
     }
 
     @Test
-    @Disabled("Fails: finding Q-2 in docs/quality-security-review.md (pending decision)")
     void countsAnEmojiAsOneCharacter() { // T25: FR5 limits characters, not UTF-16 units
         String withEmoji = "x".repeat(MAX - 1) + "\uD83D\uDE00"; // 150 characters
         assertThat(withEmoji.codePointCount(0, withEmoji.length())).isEqualTo(MAX);
