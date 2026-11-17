@@ -13,7 +13,7 @@
 | **C**: component | Vitest, Testing Library (jsdom) | Frontend components with the API mocked | Node |
 | **E2E** | Playwright (installed Chrome) + axe-core | User journeys through the running app | Running backend and frontend, demo accounts |
 
-Current state (2026-11-17): every backend test is an integration test, and Maven runs them all in one step. Approved for this worksheet: unit tests named `*Test` (Surefire, no Docker) and integration tests named `*IT` (Failsafe), so that Worksheet 05 can run them as separate CI steps. That change gets its own plan.
+Current state (2026-11-17): apart from `TextInputTest` (unit, Ex. 2), every backend test is an integration test, and Maven runs them all in one step. Approved for this worksheet: unit tests named `*Test` (Surefire, no Docker) and integration tests named `*IT` (Failsafe), so that Worksheet 05 can run them as separate CI steps. That change gets its own plan.
 
 ## 2. Scenarios: tasks and permissions (Ex. 1)
 
@@ -25,14 +25,14 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 
 | # | Input | Expected | Source | Level | Associated test | Status |
 |---|---|---|---|---|---|---|
-| T1★ | Create a task with title `"     "` | 422, `title` / `BLANK`; nothing saved | E5, D20 | U + I | I: `TasksApiTest.refusesInvalidTaskData` | Partial (U planned, Ex. 2) |
-| T2★ | Title with 2 characters (`"ab"`) | 422, `title` / `TOO_SHORT` | FR5, E5 | U + I | I: `TasksApiTest.refusesInvalidTaskData` | Partial (U planned, Ex. 2) |
-| T3★ | Title with 151 characters | 422, `title` / `TOO_LONG` | FR5, E5 | U + I | I: `TasksApiTest.refusesInvalidTaskData` | Partial (U planned, Ex. 2) |
-| T4★ | Title with exactly 3 and exactly 150 characters; `"  abc  "` | Accepted; stored trimmed as `abc` | FR5, A6 | U | — | Planned (Ex. 2) |
-| T5★ | Create with `{}` (no title) | 422, `title` / `REQUIRED` | FR5, D20 | U + I | I: `TasksApiTest.refusesInvalidTaskData` | Partial (U planned, Ex. 2) |
+| T1★ | Create a task with title `"     "` | 422, `title` / `BLANK`; nothing saved | E5, D20 | U + I | I: `TasksApiTest.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
+| T2★ | Title with 2 characters (`"ab"`) | 422, `title` / `TOO_SHORT` | FR5, E5 | U + I | I: `TasksApiTest.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
+| T3★ | Title with 151 characters | 422, `title` / `TOO_LONG` | FR5, E5 | U + I | I: `TasksApiTest.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
+| T4★ | Title with exactly 3 and exactly 150 characters; `"  abc  "` | Accepted; stored trimmed as `abc` | FR5, A6 | U | `TextInputTest.acceptsAValidTitle`, `.acceptsTheShortestAndLongestTitles`, `.trimsSpacesBeforeCheckingTheLength` | Covered (passed 2026-11-17) |
+| T5★ | Create with `{}` (no title) | 422, `title` / `REQUIRED` | FR5, D20 | U + I | I: `TasksApiTest.refusesInvalidTaskData`; U: `TextInputTest` | Covered (U passed 2026-11-17) |
 | T14 | Description with 2,001 characters; status `FINISHED`; priority `URGENT` | 422 with the field flagged | E7, D20 | I | `TasksApiTest.refusesInvalidTaskData` | Covered |
 | T23 | PATCH with an invalid title (blank, too short, too long, null) | 422; the stored title is unchanged | D20 | I | `TasksApiTest.anyMemberEditsAndStaleOrEmptyChangesAreHandled` (null only) | Partial |
-| T25 | Title made only of Unicode spaces (e.g. U+00A0); title of 150 characters that includes an emoji | Refused as blank ("not only spaces", A6); accepted if it has 150 characters (FR5 counts characters) | FR5, A6 | U | — | Planned (Ex. 2); possible finding, see §4 |
+| T25 | Title made only of Unicode spaces (e.g. U+00A0); title of 150 characters that includes an emoji | Refused as blank ("not only spaces", A6); accepted if it has 150 characters (FR5 counts characters) | FR5, A6 | U | `TextInputTest.refusesATitleMadeOnlyOfNonBreakingSpaces`, `.countsAnEmojiAsOneCharacter` (`@Disabled`) | Failing: findings Q-1, Q-2 (pending decision) |
 
 ### 2.2 Creation and reading
 
@@ -78,5 +78,12 @@ Status: **Covered** = an existing test checks it · **Partial** = only part of i
 ## 4. Not covered by this plan (limits)
 
 - Performance with 50 users and 1,000 tasks (NFR2), browsers other than Chrome, and security beyond access control (e.g. dependency vulnerabilities) are not proved by these tests. They are recorded as not verified.
-- Suspicions to check in Ex. 2 and Ex. 5, not confirmed: `String.trim()` removes only characters up to U+0020, so a title made only of U+00A0 may be accepted (T25); `String.length()` counts UTF-16 units, so an emoji counts as 2 characters (T25).
+- The two Unicode suspicions of Ex. 1 (T25) were confirmed at unit level in Ex. 2: findings Q-1 and Q-2 in [quality-security-review.md](quality-security-review.md). Their tests are `@Disabled` until David decides.
 - Areas outside tasks and permissions (accounts, password reset, logs, dashboard) are covered by the Worksheet 03 tests listed in [verification.md](verification.md) and are not repeated here.
+
+## 5. Results by exercise
+
+| Exercise | Command | Result (2026-11-17) |
+|---|---|---|
+| Ex. 2: unit | `cd backend && ./mvnw test -Dtest=TextInputTest` | 9 tests, 7 passed, 2 skipped (`@Disabled`: Q-1, Q-2) |
+| Ex. 2: full backend | `cd backend && ./mvnw verify` | 95 tests, 0 failures, 0 errors, 2 skipped; `BUILD SUCCESS` |
