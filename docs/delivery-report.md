@@ -23,7 +23,7 @@
 | Backend integration tests (`./mvnw verify -DskipUTs`, Testcontainers) | 97 passed |
 | Frontend component tests (Vitest) and build | 23 passed; type-checked build OK |
 | E2E and accessibility (Playwright + axe) on the Compose application | 7 passed, 0 skipped (also after the Ex. 6 fixes) |
-| `npm audit --audit-level=high` | 0 vulnerabilities |
+| `npm audit` | Production dependencies: 0 vulnerabilities. All dependencies: `picomatch` ≤ 4.0.7 (HIGH, development tools only, no fix), accepted; report only in CI |
 | OpenAPI lint (Redocly 2.79.0) | Valid; 2 warnings, unchanged since Worksheet 04 |
 | Semgrep 1.185.0 | 0 findings (94 files) |
 | Trivy 0.76.2 | 0 blocking HIGH/CRITICAL; 2 accepted (see section 5) |
@@ -43,13 +43,14 @@ Not yet seen: the CI run with the Ex. 6 changes (next push).
 | First pull request run failed in `ConcurrencyIT` (`[200, 403]` instead of `[200, 409]`) | The test assumed both requests pass the Manager check before either is saved; on the slower runner the second came after the first was saved (no longer a Manager, 403) | Test accepts 409 or 403 and still checks that one Manager remains; D16 clarified (Q-7) |
 | Docker CI job took about 20 minutes once (4 minutes before) | Probably the Trivy database download from its default registry (not confirmed from the log) | Public mirror, one shared cache for both images, 10-minute limit on the step |
 | E2E failed on the third run in a row | Login rate limit (20 attempts per address in 15 minutes) working as designed | Documented: for repeated runs, raise the limit in a local `compose.override.yaml` |
+| CI failed on the Ex. 6 commit at `npm audit` | New advisory for `picomatch` (development tools Vite and Vitest), no patched version | Blocking audit limited to production dependencies; full audit reported only (decision by David) |
 | Final review F-1 to F-3 | See [quality-security-review.md](quality-security-review.md) | Fixed and checked again (E2E 7 passed) |
 
 ## 4. Use of AI agents
 
 - An AI agent (Claude, through Claude Code on the developer's machine) analysed the project, proposed a plan for each exercise, and after the developer's approval wrote the Dockerfiles, Compose file, workflow, fixes, tests and documentation, ran every check and reported the real results.
 - The developer approved every plan and change, made every commit, push and merge, ran the actions outside the agent's reach (restarting Docker Desktop, freeing disk space, opening the pull request) and passed on the CI results from the private repository.
-- Decisions taken by the developer: rule D49 and the Q-3 fix; nginx for the frontend; `curl` health check; Semgrep and Trivy in CI; accepting the two `spring-webmvc` CVEs until 2027-02-17; Ubuntu 22.04 base images; E2E kept local; fixing F-1 to F-3 and recording F-4.
+- Decisions taken by the developer: rule D49 and the Q-3 fix; blocking `npm audit` on production dependencies only; nginx for the frontend; `curl` health check; Semgrep and Trivy in CI; accepting the two `spring-webmvc` CVEs until 2027-02-17; Ubuntu 22.04 base images; E2E kept local; fixing F-1 to F-3 and recording F-4.
 - Corrected AI work: the concurrency test written with AI in Worksheet 03 (entry 9 in [ai-usage.md](ai-usage.md)). The agent also flagged that the version mentioned at the start ("v0.2.0") did not match the real tag (`v1.1.0`).
 - Limitation: the agent reviewed code it had written itself, so the final review is not independent.
 
@@ -57,6 +58,7 @@ Not yet seen: the CI run with the Ex. 6 changes (next push).
 
 - **Not deployed:** hosting and the production SMTP provider are still pending decisions; emails go only to the local Mailpit.
 - **Accepted vulnerabilities:** CVE-2026-47884 and CVE-2026-47890 (`spring-webmvc` 6.2.19, CRITICAL) until 2027-02-17; the fix needs Spring Boot 4. Impact on Matriz not analysed.
+- **Accepted development-only advisory:** `picomatch` ≤ 4.0.7 (GHSA-fc5q-39xc-vjpf), until a fix is published.
 - **E2E not in CI:** they need the running application and Chrome and create data; run locally before each release.
 - Sessions and the login rate limit are kept in memory (one backend instance).
 - GitHub Actions pinned by version tag, not by commit SHA (F-4).

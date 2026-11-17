@@ -27,6 +27,7 @@ Release candidate of Worksheet 05 (delivery). Release notes: [docs/release-notes
 ### Security
 - nginx sends `X-Frame-Options`, `X-Content-Type-Options` and `Referrer-Policy` on the pages it serves (finding F-1).
 - PostgreSQL and Mailpit ports in `compose.yaml` are published on `127.0.0.1` only (finding F-2).
+- CI blocks on vulnerabilities in production npm dependencies; the full audit is reported only. `picomatch` ≤ 4.0.7 (GHSA-fc5q-39xc-vjpf, development tools only, no fix yet) is accepted.
 - Two vulnerabilities in `spring-webmvc` 6.2.19 (CVE-2026-47884, CVE-2026-47890) are accepted until 2027-02-17 in `.trivyignore.yaml`: they are fixed only in Spring Framework 7 / Spring Boot 4.
 
 ## [1.1.0] - 2026-11-17

@@ -202,7 +202,7 @@ Why not in CI: they need the whole running application and Chrome, they create d
 
 [.github/workflows/ci.yml](.github/workflows/ci.yml) runs on pushes to `main` and on pull requests to `main`, with read-only permissions (`contents: read`) and no secrets:
 
-1. In parallel: **backend** (unit tests, then integration tests and package), **frontend** (`npm ci`, tests, build, `npm audit --audit-level=high`), **contract** (OpenAPI lint) and **Semgrep** (Java, TypeScript and React rules; any finding fails).
+1. In parallel: **backend** (unit tests, then integration tests and package), **frontend** (`npm ci`, tests, build, `npm audit` of the production dependencies; the full audit is shown but does not block), **contract** (OpenAPI lint) and **Semgrep** (Java, TypeScript and React rules; any finding fails).
 2. Only if all of them pass, **docker**: `docker compose config -q` with `.env.example`, `docker compose build`, Trivy scan of both images (HIGH and CRITICAL with a published fix fail, except those accepted in [.trivyignore.yaml](.trivyignore.yaml)), start with `docker compose up --wait` and a smoke test through nginx.
 
 Any failing step fails the pipeline, and the Docker job is skipped.
@@ -240,6 +240,7 @@ Known limitations:
 
 - Sessions and the login rate limit are kept in memory: restarting the backend ends every session; one backend instance only.
 - Emails go only to the local Mailpit; the production SMTP provider and the hosting are still to decide, so the application is not deployed.
+- `picomatch` ≤ 4.0.7 in the development tools (Vite, Vitest) has an advisory with no fix yet; not in the code sent to the browser.
 - Two vulnerabilities in `spring-webmvc` 6.2.19 are accepted until 2027-02-17: the fix needs Spring Boot 4 (see [docs/quality-security-review.md](docs/quality-security-review.md)).
 - End-to-end tests run locally, not in CI.
 - GitHub Actions are pinned by version tag, not by commit SHA.

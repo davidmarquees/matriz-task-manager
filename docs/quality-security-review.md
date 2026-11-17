@@ -67,6 +67,8 @@ Review by the AI agent of the delivery setup (Dockerfiles, `nginx.conf`, `compos
 | F-3 | Every push to a branch with an open pull request ran the pipeline twice (`push` and `pull_request`) | Pairs of checks `(push)` / `(pull_request)` on the pull request | Low | Fix approved | Fixed: `push` only on `main`; pull requests to `main` still run it |
 | F-4 | GitHub Actions are pinned by version tag (`@v7`), not by commit SHA | `.github/workflows/ci.yml` | Low | Recorded only | Open (limitation) |
 
+**Dependency audit in CI (2026-11-17, after the final review).** The pull request run of the Ex. 6 commit failed at `npm audit --audit-level=high`: advisory GHSA-fc5q-39xc-vjpf (HIGH, ReDoS) in `picomatch` ≤ 4.0.7, with no patched version. `picomatch` comes only through `vite` and `vitest`, development dependencies (build and tests), and is not in the code sent to the browser: `npm audit --omit=dev` reports 0 vulnerabilities. The fix suggested by npm (`audit fix --force`, Vitest 3.1.4) would bring back the critical advisories avoided in Worksheet 03 (ai-usage #6). **Decision (David, 2026-11-17):** the pipeline blocks on production dependencies (`npm audit --omit=dev --audit-level=high`); the full audit still runs and is shown in the log, without blocking. Accepted until `picomatch` publishes a fix.
+
 Other checks with no finding: no credentials in tracked files or history (`gitleaks` 8.30.1 over 42 commits: no leaks; `git grep` for secret patterns: none; no `.env`, key or certificate tracked); images run as non-root; health checks on every service; logs of a fresh start and of the E2E runs had no WARN or ERROR.
 
 
