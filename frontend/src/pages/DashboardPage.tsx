@@ -6,13 +6,13 @@ import { ApiError } from '../api/client';
 import { getDashboard, type Dashboard } from '../api/dashboard';
 import type { ProjectSummary, TaskCounts } from '../api/projects';
 import { useAuth } from '../auth/AuthContext';
+import { CountsBar } from '../components/CountsBar';
 import { formatLongDate } from '../labels';
 import { Alert, EmptyState, Skeleton } from '../ui/Bits';
 
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'admin' } | { status: 'ready'; data: Dashboard };
 
 const total = (c: TaskCounts) => c.TODO + c.IN_PROGRESS + c.DONE;
-const pct = (n: number, of: number) => (of === 0 ? '0%' : `${Math.round((n / of) * 100)}%`);
 
 /** Dashboard (FR9, wireframe): totals, the user's projects with counts per status, progress, shortcuts. */
 export function DashboardPage() {
@@ -251,25 +251,7 @@ function ProjectRow({ project }: { project: ProjectSummary }) {
         </span>
       </div>
       <div className="bars">
-        <div className="bar" role="img" aria-label={all === 0 ? t('dashboard.noTasks') : t('dashboard.doneOf', { done: c.DONE, total: all })}>
-          <span className="bar-done" style={{ width: pct(c.DONE, all) }} />
-          <span className="bar-progress" style={{ width: pct(c.IN_PROGRESS, all) }} />
-          <span className="hatch" style={{ width: pct(c.TODO, all) }} />
-        </div>
-        <div className="legend">
-          <span>
-            <span className="dot dot-todo hatch" aria-hidden="true" />
-            {t('dashboard.legendTodo', { count: c.TODO })}
-          </span>
-          <span>
-            <span className="dot dot-progress" aria-hidden="true" />
-            {t('dashboard.legendProgress', { count: c.IN_PROGRESS })}
-          </span>
-          <span>
-            <span className="dot dot-done" aria-hidden="true" />
-            {t('dashboard.legendDone', { count: c.DONE })}
-          </span>
-        </div>
+        <CountsBar counts={c} />
       </div>
       <Link className="arrow-link" to={`/projects/${project.id}`} aria-label={t('dashboard.openProject', { name: project.name })}>
         <ArrowUpRight size={18} aria-hidden="true" />
