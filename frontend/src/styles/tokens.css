@@ -1,33 +1,44 @@
 /*
- * Design tokens (approved design, 2026-11-16): greige background, light-stone board, earthy accents.
+ * Design tokens (approved design, 2026-11-16; brighter palette approved 2026-11-18): greige background,
+ * light-stone board, earthy accents.
  * Light and dark themes; "Auto" follows the system (NFR8). All text pairs meet WCAG AA (4.5:1).
  */
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #e3ded6;              /* greige */
+  --bg: #ece6db;              /* greige, a touch brighter (UI polish) */
   --board: rgba(242, 240, 236, 0.9); /* light stone */
   --board-line: rgba(255, 255, 255, 0.7);
   --card: #ffffff;
-  --card-line: rgba(43, 43, 43, 0.08);
-  --soft: #efe9df;
+  --card-line: rgba(31, 29, 26, 0.08);
+  --soft: #f2ebdf;
   --input: #faf8f4;
-  --input-line: #cfc6b8;
-  --ink: #2b2b2b;             /* charcoal */
-  --ink-2: #5c564d;           /* secondary text, 6.4:1 on white */
+  --input-line: #c9bfae;
+  --ink: #1f1d1a;             /* charcoal; 16.8:1 on white */
+  --ink-2: #4a443c;           /* secondary text; 9.6:1 on white, 8.1:1 on soft */
   --line: #e4ddd1;
-  --brick: #a8432f;           /* main action; white text 6.0:1 */
-  --brick-text: #8f3524;      /* brick for small text on light surfaces */
+  --brick: #b23e26;           /* main action; white text 5.8:1 */
+  --brick-text: #9c3720;      /* brick for small text on light surfaces; 6.0:1 on soft */
   --on-brick: #ffffff;
-  --pine: #20483a;            /* done; white text 10.3:1 */
+  --pine: #1b5a44;            /* done; white text 8.1:1 */
   --on-pine: #ffffff;
-  --ochre: #845a0e;           /* in progress */
-  --ochre-bg: #f3e3bf;
-  --hatch: #2b2b2b;           /* to do */
-  --dark-card: #2b2b2b;
-  --on-dark: #f7f0e1;
-  --on-dark-2: #d9cdb4;
-  --focus: #a8432f;
+  --ochre: #865600;           /* in progress; 5.0:1 on ochre-bg, white text 6.3:1 */
+  --on-ochre: #ffffff;
+  --ochre-bg: #f7e4b6;
+  --hatch: #1f1d1a;           /* to do */
+  --dark-card: #26231f;
+  --on-dark: #fbf4e6;
+  --on-dark-2: #e6dbc4;       /* 10.3:1 on dark-card */
+  --focus: #b23e26;
+  --hero-accent: #f29a6c;     /* coral on the dark hero card, 6.5:1 */
+  /* bright accents for bars and the animated login background (decorative, never text) */
+  --chart-1: #f2c46c;
+  --chart-2: #86c9a8;
+  --chart-3: #e8714f;
+  --blob-1: #ef7a55;
+  --blob-2: #f3c45f;
+  --blob-3: #6fc39f;
+  --auth-board: rgba(246, 243, 238, 0.62); /* translucent so the background shows through */
   --danger: #8f3524;
   --danger-bg: #f6e3dc;
   --success: #20483a;
@@ -40,29 +51,38 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #1e1d1b;
+  --bg: #1c1b19;
   --board: rgba(43, 42, 39, 0.82);
   --board-line: rgba(255, 255, 255, 0.06);
   --card: #33312d;
   --card-line: transparent;
   --soft: #2b2a27;
   --input: #2b2a27;
-  --input-line: #57534b;
-  --ink: #f1e7d0;
-  --ink-2: #c9bea6;
+  --input-line: #5e5a51;
+  --ink: #f8f0de;             /* 11.4:1 on card */
+  --ink-2: #d8ceb8;           /* 8.3:1 on card */
   --line: #45423c;
-  --brick: #d2694f;
-  --brick-text: #e3936a;
+  --brick: #e8714f;           /* dark text 5.8:1 */
+  --brick-text: #f2a07a;      /* 6.2:1 on card */
   --on-brick: #1a1918;
-  --pine: #7db39a;
+  --pine: #86c9a8;            /* 6.8:1 on card */
   --on-pine: #1a1918;
-  --ochre: #e3b867;
+  --ochre: #f2c46c;           /* 8.0:1 on card */
+  --on-ochre: #1a1918;
   --ochre-bg: #3b3222;
-  --hatch: #f1e7d0;
+  --hatch: #f8f0de;
   --dark-card: #e6d3a3;
-  --on-dark: #2b2b2b;
-  --on-dark-2: #4a453e;
-  --focus: #e3936a;
+  --on-dark: #1f1d1a;
+  --on-dark-2: #3d3832;       /* 7.9:1 on the wheat hero card */
+  --focus: #f2a07a;
+  --hero-accent: #8f3524;     /* dark brick on the wheat hero card, 5.3:1 */
+  --chart-1: #f2c46c;
+  --chart-2: #86c9a8;
+  --chart-3: #e8714f;
+  --blob-1: #e8714f;
+  --blob-2: #f2c46c;
+  --blob-3: #86c9a8;
+  --auth-board: rgba(45, 43, 40, 0.6);
   --danger: #ee9a80;
   --danger-bg: #43271f;
   --success: #93c8a0;

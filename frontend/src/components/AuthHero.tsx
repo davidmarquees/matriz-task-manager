@@ -23,9 +23,9 @@ export function AuthHero() {
       </div>
       <div className="auth-bars" aria-hidden="true">
         <span style={{ height: '45%', border: '1.5px solid var(--on-dark)', backgroundImage: 'repeating-linear-gradient(135deg, var(--on-dark) 0 1.5px, transparent 1.5px 7px)' }} />
-        <span style={{ height: '70%', background: '#e3b867' }} />
-        <span style={{ height: '100%', background: '#7db39a' }} />
-        <span style={{ height: '60%', background: '#d2694f' }} />
+        <span style={{ height: '70%', background: 'var(--chart-1)' }} />
+        <span style={{ height: '100%', background: 'var(--chart-2)' }} />
+        <span style={{ height: '60%', background: 'var(--chart-3)' }} />
       </div>
     </section>
   );
