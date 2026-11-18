@@ -19,7 +19,7 @@ function AuthFrame({ eyebrow, title, children }: { eyebrow: string; title: strin
         <AuthHero />
         <section className="auth-panel">
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <PreferenceSwitches />
+            <PreferenceSwitches inline />
           </div>
           <div className="stack" style={{ gap: 8 }}>
             <span className="eyebrow">{eyebrow}</span>

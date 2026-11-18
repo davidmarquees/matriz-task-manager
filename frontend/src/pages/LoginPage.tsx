@@ -69,7 +69,7 @@ export function LoginPage() {
 
         <section className="auth-panel">
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <PreferenceSwitches />
+            <PreferenceSwitches inline />
           </div>
           <div className="stack" style={{ gap: 8 }}>
             <span className="eyebrow">{t('login.welcome')}</span>
