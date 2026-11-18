@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Matriz API
-  version: 0.8.0
+  version: 0.9.0
   license:
     name: Proprietary
   summary: REST API of Matriz, a project and task management application (MVP).
@@ -1288,6 +1288,70 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /dashboard/due-tasks:
+    get:
+      tags: [Dashboard]
+      operationId: listDashboardDueTasks
+      summary: List the user's tasks with a due date in a date range
+      description: |
+        Tasks with a due date between `from` and `to` (both inclusive), in every project the user is a
+        member of, for the dashboard's weekly due-date widget (UI polish, approved 2026-11-18). Sorted by
+        due date, then priority (HIGH first), then title. Not paginated: the range is limited to 42 days,
+        so the list stays small (NFR2). Read-only. The Admin account gets 403 (it has no dashboard).
+
+        - [D] Tasks without a due date are never returned.
+        - [A] "Overdue" (shown by the interface, not sent by the API) means a due date before today and a
+          status other than DONE.
+      parameters:
+        - name: from
+          in: query
+          required: true
+          description: First day of the range (inclusive).
+          schema:
+            type: string
+            format: date
+          example: '2026-11-16'
+        - name: to
+          in: query
+          required: true
+          description: Last day of the range (inclusive); not before `from` and at most 41 days after it.
+          schema:
+            type: string
+            format: date
+          example: '2026-11-22'
+      responses:
+        '200':
+          description: The tasks due in the range; an empty `items` list when there are none.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DueTaskList'
+              example:
+                items:
+                  - id: 42
+                    projectId: 7
+                    projectName: Website launch
+                    title: Test the contact form
+                    status: IN_PROGRESS
+                    priority: HIGH
+                    dueDate: '2026-11-18'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: |
+            `from` or `to` is missing (`REQUIRED`) or not a date in the form YYYY-MM-DD (`INVALID_DATE`);
+            `to` is before `from` or the range is longer than 42 days (`INVALID_VALUE` on `to`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ValidationProblem'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
 components:
   securitySchemes:
     sessionCookie:
@@ -1957,18 +2021,66 @@ components:
       properties:
         totals:
           type: object
-          required: [projects, taskCounts]
+          required: [projects, taskCounts, priorityCounts]
           properties:
             projects:
               type: integer
               minimum: 0
             taskCounts:
               $ref: '#/components/schemas/TaskCounts'
+            priorityCounts:
+              $ref: '#/components/schemas/PriorityCounts'
         projects:
           type: array
           description: Empty when the user is not a member of any project (wireframe element 7).
           items:
             $ref: '#/components/schemas/ProjectSummary'
+
+    PriorityCounts:
+      type: object
+      required: [LOW, MEDIUM, HIGH]
+      description: |
+        Number of open tasks (status TODO or IN_PROGRESS) per priority, over all the tasks of the user's
+        projects (dashboard chart, UI polish approved 2026-11-18). DONE tasks are not counted.
+      properties:
+        LOW:
+          type: integer
+          minimum: 0
+        MEDIUM:
+          type: integer
+          minimum: 0
+        HIGH:
+          type: integer
+          minimum: 0
+
+    DueTask:
+      type: object
+      required: [id, projectId, projectName, title, status, priority, dueDate]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        projectId:
+          $ref: '#/components/schemas/Id'
+        projectName:
+          type: string
+        title:
+          type: string
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        dueDate:
+          type: string
+          format: date
+
+    DueTaskList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DueTask'
 
     Problem:
       type: object

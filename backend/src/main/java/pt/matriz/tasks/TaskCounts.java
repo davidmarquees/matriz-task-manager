@@ -25,6 +25,13 @@ public class TaskCounts {
         public static final Counts ZERO = new Counts(0, 0, 0); // E2
     }
 
+    /** PriorityCounts schema of openapi.yaml: open tasks (TODO or IN_PROGRESS) per priority. */
+    public record PriorityCounts(@JsonProperty("LOW") long low,
+                                 @JsonProperty("MEDIUM") long medium,
+                                 @JsonProperty("HIGH") long high) {
+        public static final PriorityCounts ZERO = new PriorityCounts(0, 0, 0);
+    }
+
     private final NamedParameterJdbcTemplate jdbc;
 
     public TaskCounts(NamedParameterJdbcTemplate jdbc) {
@@ -53,5 +60,21 @@ public class TaskCounts {
                     ((Number) row.get("done")).longValue()));
         }
         return result;
+    }
+
+    /** Open tasks (not DONE) per priority, summed over the given projects (dashboard chart). */
+    @Transactional(readOnly = true)
+    public PriorityCounts openByPriority(Collection<Long> projectIds) {
+        if (projectIds.isEmpty()) {
+            return PriorityCounts.ZERO;
+        }
+        Map<String, Object> row = jdbc.queryForMap(
+                "SELECT count(*) FILTER (WHERE priority = 'LOW') AS low, "
+                        + "count(*) FILTER (WHERE priority = 'MEDIUM') AS medium, "
+                        + "count(*) FILTER (WHERE priority = 'HIGH') AS high "
+                        + "FROM tasks WHERE project_id IN (:ids) AND status <> 'DONE'",
+                Map.of("ids", projectIds));
+        return new PriorityCounts(((Number) row.get("low")).longValue(), ((Number) row.get("medium")).longValue(),
+                ((Number) row.get("high")).longValue());
     }
 }

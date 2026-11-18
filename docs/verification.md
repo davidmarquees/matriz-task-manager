@@ -264,3 +264,19 @@ Branch `chore/delivery` (from `main` at `v1.1.0`), pull request to `main`. Comma
 | V-80 | Public deployment: no secrets exposed; CORS | Manual | No secret in the repository or the JavaScript bundle; cookies `Secure`; preflight from another origin refused | To do (David) | — |
 
 Not checked in Worksheet 05: the impact of the two accepted `spring-webmvc` CVEs; the build on another machine with the Ubuntu 24.04 base image; the CI run after the Ex. 6 fixes (to be seen on the next push).
+
+## UI polish — palette, login and dashboard, 2026-11-18
+
+Branch `feat/ui-polish` (from `main` at `7592c10`). Plan, palette and an interactive sample approved by the developer before any change; login first (commit `176f577`), then the dashboard with two API additions approved in openapi.yaml 0.9.0. Tests were run on an isolated copy of the branch with the fictitious values of `.env.example` (PostgreSQL 16, Chromium instead of Google Chrome), because the development machine could not install Linux dependencies.
+
+| # | Scenario | Type | Expected | Observed | Evidence |
+|---|---|---|---|---|---|
+| V-81 | Brighter palette, WCAG AA (both themes) | Auto + manual | Every changed text pair at least 4.5:1; no serious axe-core violation | Changed pairs (light): text `#2b2b2b→#1f1d1a` 16.8:1, secondary `#5c564d→#4a443c` 9.6:1, button `#a8432f→#b23e26` with white 5.8:1, brick text `#8f3524→#9c3720` 6.0:1 on soft, done `#20483a→#1b5a44` with white 8.1:1, in progress `#845a0e→#865600` 5.0:1 on its background, hero text `#d9cdb4→#e6dbc4` 10.3:1, hero accent `#e3936a→#f29a6c` 6.5:1. Dark: text `#f8f0de` 11.4:1, secondary `#d8ceb8` 8.3:1, button `#e8714f` with dark text 5.8:1, brick text `#f2a07a` 6.2:1, done `#86c9a8` 6.8:1, in progress `#f2c46c` 8.0:1, hero secondary `#3d3832` 7.9:1. axe: 0 violations on login and dashboard (desktop, both themes) | Contrast computed with the WCAG formula; e2e/accessibility.spec.ts |
+| V-82 | Login: platform overview, animation, password field | Auto | Four cards below the board; background moves only without reduced motion; show/hide password and Caps Lock warning | Vitest: 3 new tests pass; axe 0 violations at 1280 px (light, dark) and 360 px; no horizontal scroll | src/test/LoginPage.test.tsx, screenshots in the project files |
+| V-83 | `GET /dashboard` priority counts and `GET /dashboard/due-tasks` | Auto | Only open tasks counted per priority; due tasks of the user's projects in the range, sorted; 422 for missing, invalid or too long ranges; 403 Admin; 401 anonymous | `DashboardApiIT`: 6 tests pass | backend/src/test/java/pt/matriz/dashboard/DashboardApiIT.java |
+| V-84 | Dashboard charts and weekly widget | Auto | Charts use the totals of every project; empty, loading and error states; week requested Monday to Sunday | Vitest: 6 new tests pass | src/test/DashboardPage.test.tsx |
+| V-85 | Whole suites after the change | Auto | No regression | Backend `mvn verify`: unit 13, integration 107 (0 failures); Vitest 32 passed; `tsc -b && vite build` OK; contract lint valid (2 existing warnings); Playwright 6 passed, 1 skipped (`admin.spec` needs `MATRIZ_E2E_ADMIN_PASSWORD`) | Commands run on 2026-11-18 |
+| V-86 | Narrow screen (360 px) | Manual | Usable layout, no horizontal scroll | Login and dashboard without horizontal scroll; axe at 360 px reports one existing issue outside this change (brand link in the mobile top bar: label differs from the visible text) | Screenshots in the project files |
+
+Not checked: the public deployment after these changes; the admin E2E test (needs the Admin password after its first change); real devices (only browser emulation).
+

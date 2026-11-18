@@ -22,6 +22,10 @@ Low-fidelity wireframe of the first screen after login for a Manager or Member a
 | 7 | Empty state: "Ainda não pertence a nenhum projeto." | FR4 |
 | 8 | Language switch PT / EN; saved in the user's profile; on mobile inside the ☰ menu | NFR1 |
 | 9 | Theme switch light / dark / Auto (follow the system, default); saved in the user's profile; on mobile inside the ☰ menu | NFR8 |
+| 10 | Charts (UI polish, 2026-11-18): tasks per status and open tasks per priority, each bar with its value and share in text | FR9, NFR8 |
+| 11 | "Prazos da semana": the seven days of a week with a dot per task due (colour by state), and the tasks due on the selected day; previous / next week and "Hoje" | FR5 (due date) |
+| 12 | Each project bar shows the share of tasks done (%); "Progresso geral" and "Atalhos" share one row | FR9 |
+| 13 | Animated background (drifting shapes in the palette colours) behind the tiles, as on the login page; still with reduced motion | NFR7, NFR8 |
 
 ## Labels for enumerated values [D]
 
@@ -48,7 +52,7 @@ Plural forms (e.g. "Concluídas" in the counters) follow the same translation fi
 - [D] One responsive web page for desktop and mobile browsers; no native app (NFR7).
 - [D] Light and dark themes; information is never conveyed by colour alone (counts always have a text label) (NFR8).
 - [D] The project activity log is inside each project, not on the dashboard (FR13).
-- No feature outside the MVP is shown (no kanban, notifications or due-date alerts).
+- No feature outside the MVP is shown (no kanban, notifications or due-date alerts; the weekly widget only lists the due dates that already exist).
 
 ## Assumptions
 
@@ -58,8 +62,11 @@ Plural forms (e.g. "Concluídas" in the counters) follow the same translation fi
 - [A] Projects are sorted by name; no pagination is needed at the NFR2 scale.
 - [A] Mobile layout: totals in a 2 × 2 grid, project cards stacked, user menu behind ☰; minimum width 360 px.
 - [A] Navigation in the MVP: Painel → project (task list, activity log) → task detail.
+- [A] "Em atraso" (overdue) in the weekly widget: due date before today and status other than DONE; computed by the interface (UI polish, 2026-11-18).
+- [A] The priority chart counts only open tasks (TODO and IN_PROGRESS); done tasks need no attention.
 
 ## Pending decisions
 
 - [D] Dashboard data: `GET /dashboard`; language and theme saved with `PATCH /auth/me/preferences` (openapi.yaml, Worksheet 03).
+- [D] UI polish, approved 2026-11-18: `totals.priorityCounts` in `GET /dashboard` and `GET /dashboard/due-tasks?from&to` (at most 42 days) for the weekly widget (openapi.yaml 0.9.0); brighter palette in `tokens.css`, WCAG AA pairs listed in docs/verification.md (V-81).
 - [D] Colour palette for both themes approved in Worksheet 03, Ex. 7 (`frontend/src/styles/tokens.css`); WCAG AA contrast checked, and no serious axe-core violation in either theme (Ex. 8).
