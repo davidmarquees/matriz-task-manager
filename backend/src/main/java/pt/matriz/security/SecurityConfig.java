@@ -2,6 +2,7 @@ package pt.matriz.security;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -9,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -28,6 +30,9 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfAuthenticationStrategy;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -49,6 +54,7 @@ public class SecurityConfig {
     SecurityFilterChain api(HttpSecurity http, CsrfTokenRepository csrfTokens, SecurityContextRepository contexts,
                             SessionRegistry sessions, AccountService accounts, ObjectMapper json) throws Exception {
         http
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokens)
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
@@ -78,6 +84,29 @@ public class SecurityConfig {
 
     private static void unauthorized(HttpServletResponse response, ObjectMapper json) throws IOException {
         Problems.write(response, json, Problems.of(HttpStatus.UNAUTHORIZED));
+    }
+
+    /**
+     * CORS only for the origins in MATRIZ_CORS_ALLOWED_ORIGINS (comma-separated, docs/deployment.md).
+     * Empty by default: no cross-origin access, as in local development, where the browser reaches the
+     * API through the same origin (Vite proxy or nginx).
+     */
+    @Bean
+    CorsConfigurationSource corsConfigurationSource(@Value("${matriz.cors-allowed-origins}") String origins) {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        List<String> allowed = Arrays.stream(origins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
+        if (!allowed.isEmpty()) {
+            CorsConfiguration config = new CorsConfiguration();
+            config.setAllowedOrigins(allowed);
+            config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE"));
+            config.setAllowedHeaders(List.of("Content-Type", "X-XSRF-TOKEN"));
+            config.setAllowCredentials(true);
+            source.registerCorsConfiguration("/**", config);
+        }
+        return source;
     }
 
     @Bean
