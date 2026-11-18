@@ -45,7 +45,7 @@
 - A user cannot access, even via direct URL, projects they are not a member of.
 - Login messages do not reveal whether the email exists.
 - Minimal personal data, in line with the GDPR: name, email, password hash, language and theme preferences, failed login attempts, and the user's actions in the two logs (`user_audit_log`, `activity_log`). The logs store ids and the names of changed personal fields, never their values (name, email), so anonymising an account also anonymises the logs.
-- Demo accounts use fictitious data and must not exist in a production environment.
+- Demo accounts use fictitious data and must not exist in a production environment. The public course demo on Render ([deployment.md](deployment.md)) is a demo environment, not production: it runs the `demo` profile on purpose (decided by David, 2026-11-18).
 - Credentials and secrets are never stored in the repository.
 
 ## 4. Pending technical decisions

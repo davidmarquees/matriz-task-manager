@@ -2,6 +2,8 @@
 
 Project and task management application for work teams: teams organise projects, manage tasks and track the progress of their work.
 
+Public demo (Render + Neon, fictitious data): <https://matriz-web.onrender.com> — see [docs/deployment.md](docs/deployment.md).
+
 Current version: **1.2.0-rc.1** (release candidate, see [CHANGELOG.md](CHANGELOG.md) and the [release notes](docs/release-notes/v1.2.0-rc.1.md)).
 
 ## Features
@@ -60,7 +62,8 @@ All configuration comes from environment variables, kept in the `.env` file at t
 | `MATRIZ_DB_OWNER_USER`, `MATRIZ_DB_OWNER_PASSWORD` | Compose, Flyway | Database owner; creates the schema |
 | `MATRIZ_DB_APP_USER`, `MATRIZ_DB_APP_PASSWORD` | Compose, backend | Application user at runtime; `INSERT` and `SELECT` only on the logs |
 | `MATRIZ_DB_URL` | Backend | JDBC URL, e.g. `jdbc:postgresql://localhost:5432/matriz` (Compose sets its own) |
-| `MATRIZ_SERVER_PORT` | Backend | HTTP port (default 8080) |
+| `MATRIZ_SERVER_PORT` | Backend | HTTP port (default: `PORT` if set, as on Render, otherwise 8080) |
+| `MATRIZ_CORS_ALLOWED_ORIGINS` | Backend | Origins allowed to call the API from another site, comma-separated; empty (default) = none |
 | `MATRIZ_COOKIE_SECURE` | Backend | `true` sends the session and CSRF cookies over HTTPS only; `false` only for local HTTP |
 | `MATRIZ_PROFILE` | Backend | `dev` adds the demo data; leave empty in production |
 | `MATRIZ_ADMIN_NAME`, `MATRIZ_ADMIN_EMAIL`, `MATRIZ_ADMIN_PASSWORD` | Backend | Admin account created at the first start if none exists |
@@ -132,7 +135,9 @@ Each service has a health check (`pg_isready`, `mailpit readyz`, `GET /api/actua
 
 Both modes use the same database volume. The Compose backend publishes no port, so modes A and B can run at the same time.
 
-### Demo accounts (`dev` profile only, fictitious data)
+### Demo accounts (`dev` and `demo` profiles only, fictitious data)
+
+The `demo` profile is used only by the public course deployment ([docs/deployment.md](docs/deployment.md)); it adds the same demo data as `dev` and nothing else.
 
 | Account | Email | Password | Access |
 |---|---|---|---|
@@ -230,6 +235,7 @@ Versions follow [Semantic Versioning](https://semver.org/); tags `vX.Y.Z` mark t
 | [CHANGELOG.md](CHANGELOG.md) | Changes per version |
 | [docs/release-notes/v1.2.0-rc.1.md](docs/release-notes/v1.2.0-rc.1.md) | Release notes of the current release candidate |
 | [docs/delivery-report.md](docs/delivery-report.md) | Worksheet 05 delivery report: changes, results, problems, AI use, limitations |
+| [docs/deployment.md](docs/deployment.md) | Public deployment on Render + Neon: steps, variables, limitations, validation |
 | [AGENTS.md](AGENTS.md) | Instructions for coding agents |
 
 ## Current status
@@ -239,7 +245,8 @@ Release candidate 1.2.0-rc.1 (Worksheet 05): the MVP of Worksheet 03 (authentica
 Known limitations:
 
 - Sessions and the login rate limit are kept in memory: restarting the backend ends every session; one backend instance only.
-- Emails go only to the local Mailpit; the production SMTP provider and the hosting are still to decide, so the application is not deployed.
+- Public demo on Render + Neon free plans ([docs/deployment.md](docs/deployment.md)): the backend sleeps after 15 minutes without requests and takes about a minute to wake up; a restart ends every session.
+- The production SMTP provider is still to decide: emails go to the local Mailpit in development; in the public demo they are sent only if `MATRIZ_MAIL_*` is set.
 - `picomatch` ≤ 4.0.7 in the development tools (Vite, Vitest) has an advisory with no fix yet; not in the code sent to the browser.
 - Two vulnerabilities in `spring-webmvc` 6.2.19 are accepted until 2027-02-17: the fix needs Spring Boot 4 (see [docs/quality-security-review.md](docs/quality-security-review.md)).
 - End-to-end tests run locally, not in CI.
