@@ -84,7 +84,7 @@ services:
       # Order matters: the API first, then the single-page application (React Router)
       - type: rewrite
         source: /api/*
-        destination: https://matriz-api.onrender.com/api/*
+        destination: https://matriz-api-mjrq.onrender.com/api/*
       - type: rewrite
         source: /*
         destination: /index.html

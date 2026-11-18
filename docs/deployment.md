@@ -14,11 +14,11 @@ Public deployment of Matriz with HTTPS on free plans, for the final presentation
 | Configuration | [`render.yaml`](../render.yaml) (Render Blueprint) | Versioned settings; secrets only in the Render Dashboard (`sync: false`) |
 
 ```
-browser ──HTTPS──> matriz-web.onrender.com ──/api/* rewrite──> matriz-api.onrender.com ──SSL──> Neon
+browser ──HTTPS──> matriz-web.onrender.com ──/api/* rewrite──> matriz-api-mjrq.onrender.com ──SSL──> Neon
                    (static files, SPA)                         (Spring Boot, /api)
 ```
 
-**Why the `/api` rewrite and not direct calls with CORS.** Login uses a server-side session: an HttpOnly session cookie and a CSRF token that the SPA reads from the `XSRF-TOKEN` cookie (`frontend/src/api/client.ts`) and sends with `credentials: 'same-origin'`. `onrender.com` is on the Public Suffix List, so `matriz-web.onrender.com` and `matriz-api.onrender.com` are different *sites*: a page on one cannot read the other's cookies, and browsers block its `SameSite=Lax` cookies on cross-site calls. The Static Site rewrite keeps the API on the frontend's origin, as nginx does in `compose.yaml`. CORS is still configured (`MATRIZ_CORS_ALLOWED_ORIGINS`, only the frontend's address) as a second layer; it is off when the variable is empty, as in local development.
+**Why the `/api` rewrite and not direct calls with CORS.** Login uses a server-side session: an HttpOnly session cookie and a CSRF token that the SPA reads from the `XSRF-TOKEN` cookie (`frontend/src/api/client.ts`) and sends with `credentials: 'same-origin'`. `onrender.com` is on the Public Suffix List, so `matriz-web.onrender.com` and `matriz-api-mjrq.onrender.com` are different *sites*: a page on one cannot read the other's cookies, and browsers block its `SameSite=Lax` cookies on cross-site calls. The Static Site rewrite keeps the API on the frontend's origin, as nginx does in `compose.yaml`. CORS is still configured (`MATRIZ_CORS_ALLOWED_ORIGINS`, only the frontend's address) as a second layer; it is off when the variable is empty, as in local development.
 
 **Local environment unchanged.** Docker Compose, the Dockerfiles, `nginx.conf` and `.env` keep working as before: the new settings are a profile (`demo`) and environment variables with the old defaults.
 
@@ -61,9 +61,9 @@ Example with fictitious values: `jdbc:postgresql://ep-example-123456.eu-central-
 2. **New → Blueprint**, repository `matriz-task-manager`, branch `main` (after the deployment branch is merged). Render reads `render.yaml` and lists `matriz-api` and `matriz-web`.
 3. Fill in the `sync: false` values (section 4). Render asks for them **only when the Blueprint is created**; later changes are made in each service's **Environment** page.
 4. **Apply**. The first backend build takes several minutes (Maven inside Docker).
-5. Check the addresses Render gave the two services. If they are not `matriz-api.onrender.com` and `matriz-web.onrender.com` (name taken), update `MATRIZ_APP_URL`, `MATRIZ_CORS_ALLOWED_ORIGINS` and the `/api/*` rewrite destination in `render.yaml` (and in the Dashboard), then deploy again.
+5. Check the addresses Render gave the two services. A name already taken gets a suffix: the backend got `matriz-api-mjrq.onrender.com` on 2026-11-18. If an address changes, update `MATRIZ_APP_URL`, `MATRIZ_CORS_ALLOWED_ORIGINS` and the `/api/*` rewrite destination in `render.yaml` (and in the Dashboard), then deploy again.
 6. Check that **Auto-Deploy** is "After CI Checks Pass" on both services (Settings → Build & Deploy).
-7. First test: open `https://matriz-web.onrender.com`, log in as `manager@example.test` (section 6). If login fails while `https://matriz-api.onrender.com/api/actuator/health` answers `{"status":"UP"}`, the rewrite is not passing cookies or POST requests: see section 8.
+7. First test: open `https://matriz-web.onrender.com`, log in as `manager@example.test` (section 6). If login fails while `https://matriz-api-mjrq.onrender.com/api/actuator/health` answers `{"status":"UP"}`, the rewrite is not passing cookies or POST requests: see section 8.
 
 ## 4. Environment variables (names only)
 
@@ -106,7 +106,7 @@ The frontend has no secrets: everything in `VITE_*` is public.
 | What | Address |
 |---|---|
 | Application | `https://matriz-web.onrender.com` (update if Render gave another name) |
-| Backend health | `https://matriz-api.onrender.com/api/actuator/health` |
+| Backend health | `https://matriz-api-mjrq.onrender.com/api/actuator/health` |
 
 Demonstration accounts (password: `MATRIZ_DEMO_PASSWORD`, not written anywhere in the repository):
 
@@ -136,7 +136,7 @@ Record the results in [verification.md](verification.md) (rows V-76 to V-80).
 3. **Persistence:** create a project and a task, then **Manual Deploy → Deploy latest commit** on `matriz-api`; after it is live, log in again: both are still there.
 4. **IDOR:** as `member@example.test`, open the "Annual report" project by its URL (`/projects/<id>` of the Manager's project) and call `GET /api/projects/<id>` → 404 (D17, openapi.yaml), never the data.
 5. **No secrets exposed:** `git grep` and `gitleaks` on the repository → nothing; in the browser, the JavaScript bundle contains no `MATRIZ_*` value and no Neon host; cookies `JSESSIONID` (HttpOnly, Secure) and `XSRF-TOKEN` (Secure) on `matriz-web.onrender.com`.
-6. **CORS:** a preflight from another origin is refused: `curl -si -X OPTIONS https://matriz-api.onrender.com/api/auth/login -H 'Origin: https://example.test' -H 'Access-Control-Request-Method: POST'` → 403, no `Access-Control-Allow-Origin`.
+6. **CORS:** a preflight from another origin is refused: `curl -si -X OPTIONS https://matriz-api-mjrq.onrender.com/api/auth/login -H 'Origin: https://example.test' -H 'Access-Control-Request-Method: POST'` → 403, no `Access-Control-Allow-Origin`.
 7. **Rate limit address (to check):** after a few failed logins, the backend logs and the 429 behaviour should reflect one client, not every user sharing the Render proxy's address.
 
 ### If login fails through the rewrite (fallback)
