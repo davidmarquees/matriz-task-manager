@@ -148,7 +148,7 @@ flowchart LR
 ## 6. Assumptions
 
 - [A] The frontend is a separate React build served as static files; in development it calls the backend through a proxy.
-- [A] One environment for the course (local); demo accounts exist only outside production.
+- [A] Environments for the course: local and the public demo (deployment.md), both with fictitious demo accounts; a real production environment would have none.
 - [A] No caching, message queues or background jobs are needed for NFR2.
 - [A] The API returns codes (enum values, error codes), never translated text; screen translations live in the frontend. The only translated text in the backend is the password reset email.
 
@@ -158,7 +158,7 @@ Single list of pending technical decisions (constraints.md links here).
 
 Decided in Worksheet 03 (docs/implementation-plan.md, section 7): versions, build tools, local runtime, testing strategy, repository layout, pagination and how pre-created account passwords are provided (see section 4).
 
-- [P] Hosting beyond the local environment. Worksheet 05 prepared the images, Compose and CI, but no deployment target was chosen; not needed for the worksheet.
+- [D] Hosting of the public course demo (after Worksheet 05): Render (backend as a Docker web service, frontend as a Static Site that rewrites `/api/*` to the backend, so the browser keeps one origin) and Neon PostgreSQL over SSL, free plans, deployed from `main` after the CI checks pass. See [deployment.md](deployment.md).
 - [D] End-to-end tests with Playwright and an axe-core accessibility audit, adopted in Worksheet 03, Ex. 8 (`frontend/e2e`); Worksheet 04 can extend them.
 - [D] Reset email in development: Mailpit (local SMTP test server in `compose.yaml`, renamed from `docker-compose.yml` in Worksheet 05), Worksheet 03, Ex. 8.
-- [P] SMTP provider and sender address for production.
+- [P] SMTP provider and sender address for production. Free Render services block ports 25, 465 and 587; for the public demo an SMTP test inbox on port 2525 is the proposed option (deployment.md, section 7).

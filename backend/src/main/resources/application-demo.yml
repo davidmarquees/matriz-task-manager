@@ -1,0 +1,13 @@
+# Demo profile for the public course deployment (Render + Neon, docs/deployment.md): the same demo
+# data as the dev profile (two demo accounts, two projects, tasks in every status), nothing else.
+# Flyway runs the seed once and records it, so redeploys never repeat it or delete data.
+# Keep this profile active in that environment: without it Flyway's validation fails on start-up
+# because the applied seed migration (V2.1) can no longer be found.
+spring:
+  flyway:
+    locations:
+      - classpath:db/migration
+      - classpath:db/seeddev
+    placeholders:
+      # Password of the two demo accounts; stored only as a BCrypt hash.
+      demoPassword: ${MATRIZ_DEMO_PASSWORD:}

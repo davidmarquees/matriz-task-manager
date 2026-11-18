@@ -10,7 +10,8 @@ import org.flywaydb.core.api.migration.Context;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 /**
- * Demo data for the development profile only (A25, docs/implementation-plan.md M1 to M3).
+ * Demo data for the dev profile and the demo profile of the public course deployment (A25,
+ * docs/implementation-plan.md M1 to M3, docs/deployment.md).
  *
  * <p>Flyway runs it once and records it in its history table, so later start-ups never repeat it
  * and never delete data. Version 2.1 places it right after the schema and grants, so later

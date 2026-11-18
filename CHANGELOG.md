@@ -2,6 +2,19 @@
 
 All notable changes to Matriz. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/). Each version is a Git tag `vX.Y.Z` on `main`.
 
+## [Unreleased]
+
+Public course demo on Render + Neon ([docs/deployment.md](docs/deployment.md)).
+
+### Added
+- `render.yaml` (Render Blueprint): backend Docker web service and frontend Static Site on free plans, deployed from `main` after the CI checks pass; `/api/*` rewritten to the backend; security headers on the static files.
+- `demo` profile (`application-demo.yml`): the demo data of `dev`, for the public demo only.
+- CORS limited to the origins in the new variable `MATRIZ_CORS_ALLOWED_ORIGINS` (empty by default: no cross-origin access).
+- `docs/deployment.md`: steps in Neon and Render, variable names, limitations, validation.
+
+### Changed
+- The backend listens on `PORT` when `MATRIZ_SERVER_PORT` is not set (Render).
+
 ## [1.2.0-rc.1] - 2026-11-17
 
 Release candidate of Worksheet 05 (delivery). Release notes: [docs/release-notes/v1.2.0-rc.1.md](docs/release-notes/v1.2.0-rc.1.md).
