@@ -39,4 +39,44 @@ describe('LoginPage', () => {
 
     await waitFor(() => expect(screen.getByTestId('login-error')).toHaveTextContent('Demasiadas tentativas'));
   });
+
+  it('shows and hides the password without losing it', async () => {
+    mockApi({ 'GET /auth/me': { status: 401 } });
+    renderWithApp(<LoginPage />, '/login');
+
+    const password = await screen.findByTestId('login-password');
+    fireEvent.change(password, { target: { value: 'secret-1' } });
+    expect(password).toHaveAttribute('type', 'password');
+
+    fireEvent.click(screen.getByTestId('login-password-toggle'));
+    expect(password).toHaveAttribute('type', 'text');
+    expect(screen.getByTestId('login-password-toggle')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('login-password-toggle')).toHaveAccessibleName('Ocultar palavra-passe');
+
+    fireEvent.click(screen.getByTestId('login-password-toggle'));
+    expect(password).toHaveAttribute('type', 'password');
+    expect(password).toHaveValue('secret-1');
+  });
+
+  it('warns when Caps Lock is on while typing the password', async () => {
+    mockApi({ 'GET /auth/me': { status: 401 } });
+    renderWithApp(<LoginPage />, '/login');
+
+    const password = await screen.findByTestId('login-password');
+    fireEvent.keyUp(password, { key: 'A', modifierCapsLock: true });
+    expect(await screen.findByTestId('login-caps-lock')).toHaveTextContent('Caps Lock está ativo.');
+
+    fireEvent.blur(password);
+    expect(screen.queryByTestId('login-caps-lock')).not.toBeInTheDocument();
+  });
+
+  it('describes the platform below the login board, in four parts', async () => {
+    mockApi({ 'GET /auth/me': { status: 401 } });
+    renderWithApp(<LoginPage />, '/login');
+
+    const about = await screen.findByTestId('login-about');
+    expect(about).toHaveTextContent('Conheça o Matriz');
+    expect(about.querySelectorAll('.info-card')).toHaveLength(4);
+    expect(screen.getByTestId('login-about-link')).toHaveAttribute('href', '#about-matriz');
+  });
 });
